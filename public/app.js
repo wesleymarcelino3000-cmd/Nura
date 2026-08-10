@@ -6,20 +6,34 @@ const typing = document.querySelector("#typing");
 const resetBtn = document.querySelector("#resetBtn");
 const modeBanner = document.querySelector("#modeBanner");
 
+const params = new URLSearchParams(location.search);
+if (params.get("embed") === "1") document.body.classList.add("embed");
+
 let catalog = [];
 let messages = [];
 let busy = false;
 
-const initialAssistant = "Oi 😊 Que bom ter você por aqui. Eu posso te ajudar a encontrar um perfume que combine com seu estilo, mesmo que você não entenda nada de perfumaria. É para você ou para presente?";
+const initialAssistant = "Oi 😊 É um prazer te receber. Para começar bem: o perfume é para você ou para presentear alguém?";
+
+async function loadCatalog() {
+  try {
+    const response = await fetch("/api/catalog", { headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error("API catalog indisponível");
+    const data = await response.json();
+    return Array.isArray(data.items) ? data.items : [];
+  } catch {
+    try {
+      return await fetch("/catalog.json").then(r => r.json());
+    } catch {
+      return [];
+    }
+  }
+}
 
 async function init() {
-  try {
-    catalog = await fetch("/catalog.json").then(r => r.json());
-  } catch {
-    catalog = [];
-  }
-
+  catalog = await loadCatalog();
   const saved = sessionStorage.getItem("nuraConversation");
+
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -39,19 +53,25 @@ async function init() {
   if (!messages.length) {
     messages = [{ role: "assistant", text: initialAssistant, recommendationIds: [] }];
   }
-  scrollBottom();
-}
 
-function escapeForText(value) {
-  return String(value ?? "");
+  input.focus({ preventScroll: true });
+  scrollBottom();
 }
 
 function appendMessage(role, text, save = true) {
   const row = document.createElement("div");
   row.className = `message ${role}`;
+
+  if (role === "assistant") {
+    const avatar = document.createElement("div");
+    avatar.className = "assistant-mini-avatar";
+    avatar.textContent = "N";
+    row.appendChild(avatar);
+  }
+
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = escapeForText(text);
+  bubble.textContent = String(text ?? "");
   row.appendChild(bubble);
   chat.appendChild(row);
 
@@ -59,12 +79,13 @@ function appendMessage(role, text, save = true) {
     messages.push({ role, text, recommendationIds: [] });
     persist();
   }
+
   scrollBottom();
 }
 
 function renderRecommendationCards(ids = []) {
   const products = ids
-    .map(id => catalog.find(p => p.id === id))
+    .map(id => catalog.find(product => product.id === id))
     .filter(Boolean)
     .slice(0, 3);
 
@@ -77,10 +98,25 @@ function renderRecommendationCards(ids = []) {
     const card = document.createElement("article");
     card.className = "product-card";
 
+    const imageWrap = document.createElement("div");
+    imageWrap.className = "product-image-wrap";
+
+    const badge = document.createElement("span");
+    badge.className = "product-badge";
+    badge.textContent = product.audience || "Perfume árabe";
+
     const img = document.createElement("img");
     img.src = product.image;
     img.alt = `${product.name}, ${product.brand}`;
     img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    img.addEventListener("error", () => {
+      if (product.fallbackImage && img.src !== new URL(product.fallbackImage, location.href).href) {
+        img.src = product.fallbackImage;
+      }
+    }, { once: true });
+
+    imageWrap.append(img, badge);
 
     const body = document.createElement("div");
     body.className = "product-body";
@@ -95,10 +131,28 @@ function renderRecommendationCards(ids = []) {
 
     const profile = document.createElement("p");
     profile.className = "product-profile";
-    profile.textContent = product.profile;
+    profile.textContent = product.vibe || product.profile;
 
-    body.append(brand, title, profile);
-    card.append(img, body);
+    const actions = document.createElement("div");
+    actions.className = "product-actions";
+
+    const choose = document.createElement("button");
+    choose.type = "button";
+    choose.className = "choose-product";
+    choose.dataset.productChoice = product.id;
+    choose.dataset.productName = product.name;
+    choose.textContent = "Gostei desse";
+
+    const compare = document.createElement("button");
+    compare.type = "button";
+    compare.className = "compare-product";
+    compare.dataset.productCompare = product.id;
+    compare.dataset.productName = product.name;
+    compare.textContent = "Quero comparar";
+
+    actions.append(choose, compare);
+    body.append(brand, title, profile, actions);
+    card.append(imageWrap, body);
     wrap.appendChild(card);
   }
 
@@ -111,9 +165,7 @@ function persist() {
 }
 
 function scrollBottom() {
-  requestAnimationFrame(() => {
-    chat.scrollTop = chat.scrollHeight;
-  });
+  requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
 }
 
 function setBusy(value) {
@@ -122,6 +174,7 @@ function setBusy(value) {
   input.disabled = value;
   typing.classList.toggle("hidden", !value);
   if (value) scrollBottom();
+  else input.focus({ preventScroll: true });
 }
 
 function autoGrow() {
@@ -129,19 +182,44 @@ function autoGrow() {
   input.style.height = `${Math.min(input.scrollHeight, 130)}px`;
 }
 input.addEventListener("input", autoGrow);
-
-document.addEventListener("click", (event) => {
-  const btn = event.target.closest("[data-quick]");
-  if (!btn || busy) return;
-  input.value = btn.dataset.quick;
-  form.requestSubmit();
-  document.querySelector("#initialChips")?.remove();
+input.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    form.requestSubmit();
+  }
 });
 
-form.addEventListener("submit", async (event) => {
+document.addEventListener("click", event => {
+  const quick = event.target.closest("[data-quick]");
+  if (quick && !busy) {
+    input.value = quick.dataset.quick;
+    form.requestSubmit();
+    document.querySelector("#initialChips")?.remove();
+    document.querySelector("#introCard")?.remove();
+    return;
+  }
+
+  const choose = event.target.closest("[data-product-choice]");
+  if (choose && !busy) {
+    input.value = `Gostei do ${choose.dataset.productName}. Me ajuda a decidir se ele combina mesmo comigo.`;
+    form.requestSubmit();
+    return;
+  }
+
+  const compare = event.target.closest("[data-product-compare]");
+  if (compare && !busy) {
+    input.value = `Quero comparar o ${compare.dataset.productName} com outra opção que faça sentido para mim.`;
+    form.requestSubmit();
+  }
+});
+
+form.addEventListener("submit", async event => {
   event.preventDefault();
   const text = input.value.trim();
   if (!text || busy) return;
+
+  document.querySelector("#initialChips")?.remove();
+  document.querySelector("#introCard")?.remove();
 
   appendMessage("user", text);
   input.value = "";
@@ -149,9 +227,9 @@ form.addEventListener("submit", async (event) => {
   setBusy(true);
 
   const payloadMessages = messages
-    .filter(m => m.role === "user" || m.role === "assistant")
-    .slice(-16)
-    .map(m => ({ role: m.role, text: m.text }));
+    .filter(item => item.role === "user" || item.role === "assistant")
+    .slice(-18)
+    .map(item => ({ role: item.role, text: item.text }));
 
   try {
     const response = await fetch("/api/chat", {
@@ -160,15 +238,14 @@ form.addEventListener("submit", async (event) => {
       body: JSON.stringify({ messages: payloadMessages })
     });
 
-    if (!response.ok) throw new Error("API indisponível");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "API indisponível");
 
-    const data = await response.json();
     const reply = data.reply || "Me conta um pouco mais do que você procura.";
     const ids = Array.isArray(data.recommendationIds) ? data.recommendationIds : [];
 
     setBusy(false);
     appendMessage("assistant", reply);
-
     messages[messages.length - 1].recommendationIds = ids;
     persist();
     renderRecommendationCards(ids);
@@ -181,7 +258,7 @@ form.addEventListener("submit", async (event) => {
     persist();
     renderRecommendationCards(demo.recommendationIds);
 
-    modeBanner.textContent = "Modo demonstração ativo. Para respostas realmente inteligentes, configure a chave gratuita da Gemini no Cloudflare.";
+    modeBanner.textContent = "Estou em modo demonstração. Assim que a chave da Gemini estiver configurada no Cloudflare, o atendimento usa a IA completa.";
     modeBanner.classList.remove("hidden");
   }
 });
@@ -193,53 +270,32 @@ resetBtn.addEventListener("click", () => {
 
 function demoReply(text) {
   const t = text.toLowerCase();
-  const userTexts = messages.filter(m => m.role === "user").map(m => m.text.toLowerCase()).join(" ");
+  const context = messages.filter(m => m.role === "user").map(m => m.text.toLowerCase()).join(" ");
 
   if (t.includes("presente")) {
-    return {
-      reply: "Boa escolha em pedir ajuda antes de comprar. Para eu não te indicar algo no escuro: a pessoa é mais discreta e elegante ou gosta de perfume que chama atenção?",
-      recommendationIds: []
-    };
+    return { reply: "Consigo te ajudar mesmo sem você saber quais perfumes a pessoa usa. Ela é mais discreta e elegante ou gosta de chegar e ser notada?", recommendationIds: [] };
   }
 
-  if (t.includes("doce") || userTexts.includes("doce")) {
-    if (t.includes("noite") || t.includes("balada") || t.includes("festa") || userTexts.includes("noite")) {
-      return {
-        reply: "Já dá para afunilar bem. Para uma proposta doce e noturna, eu olharia primeiro para o 9 PM e o Khamrah. O 9 PM tende a passar uma sensação mais jovem e de saída; o Khamrah vai para um lado mais gourmand e especiado. Você quer algo mais sedutor e descontraído ou mais quente e sofisticado?",
-        recommendationIds: ["afnan-9pm", "lattafa-khamrah"]
-      };
+  if (t.includes("doce") || context.includes("doce")) {
+    if (/noite|balada|festa|encontro/.test(t + " " + context)) {
+      return { reply: "Para esse clima mais doce e noturno, eu colocaria dois na sua frente: 9 PM e Khamrah. O primeiro é mais jovem e sedutor; o segundo é mais quente e gourmand. Pelo seu jeito, qual dessas duas sensações parece mais você?", recommendationIds: ["afnan-9pm", "lattafa-khamrah"] };
     }
-    return {
-      reply: "Entendi a direção. Doce pode ir de algo jovem e divertido até um gourmand bem quente. Você imagina usar mais durante o dia ou quando sair à noite?",
-      recommendationIds: []
-    };
+    return { reply: "Doce pode seguir caminhos bem diferentes. Você imagina algo mais jovem e sedutor ou mais quente, cremoso e sofisticado?", recommendationIds: [] };
   }
 
-  if (t.includes("marcante") || t.includes("forte") || userTexts.includes("marcante")) {
-    return {
-      reply: "Então eu não te levaria para os mais discretos. Dá para buscar presença sem ficar pesado demais. Você quer essa presença para encontros e festas ou precisa que funcione também no dia a dia?",
-      recommendationIds: []
-    };
+  if (/marcante|forte|chama atenção/.test(t + " " + context)) {
+    return { reply: "Então faz sentido procurar presença, mas sem escolher algo pesado só por ser forte. Você quer usar mais em encontros e festas ou também precisa que funcione no dia a dia?", recommendationIds: [] };
   }
 
-  if (t.includes("fresco") || t.includes("dia") || t.includes("trabalho")) {
-    return {
-      reply: "Nesse caminho eu priorizaria algo mais versátil e menos carregado. O Club de Nuit Intense Man entra como uma opção interessante do catálogo inicial. Antes de bater o martelo: você gosta de um toque mais frutado/cítrico ou prefere algo mais amadeirado?",
-      recommendationIds: ["armaf-cdnim"]
-    };
+  if (/fresco|dia|trabalho/.test(t + " " + context)) {
+    return { reply: "Nesse caso eu iria por algo mais versátil e fácil de conviver. O Club de Nuit Intense Man entra bem nessa conversa. Você prefere uma saída mais cítrica e frutada ou quer algo mais amadeirado?", recommendationIds: ["armaf-cdnim"] };
   }
 
-  if (t.includes("para mim") || t.includes("é pra mim") || t.includes("e pra mim")) {
-    return {
-      reply: "Ótimo. Me dá uma referência sua: tem algum perfume que você usa ou já sentiu e pensou “é esse tipo de cheiro que eu gosto”? Pode ser de qualquer marca.",
-      recommendationIds: []
-    };
+  if (/para mim|pra mim/.test(t)) {
+    return { reply: "Ótimo. Me dá uma referência: tem algum perfume que você já usou, sentiu em alguém ou simplesmente gostou muito? Pode ser de qualquer marca.", recommendationIds: [] };
   }
 
-  return {
-    reply: "Fica à vontade para me explicar do seu jeito. O que você quer sentir quando usar esse perfume: algo mais limpo e elegante, mais doce e envolvente, ou uma fragrância que chega com bastante presença?",
-    recommendationIds: []
-  };
+  return { reply: "Pode me explicar do seu jeito. Você quer passar uma sensação mais limpa e elegante, mais doce e envolvente ou prefere um perfume que chega com bastante presença?", recommendationIds: [] };
 }
 
 init();

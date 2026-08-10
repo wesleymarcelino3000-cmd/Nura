@@ -1,98 +1,109 @@
-const CATALOG = [{"id": "lattafa-khamrah", "name": "Khamrah", "brand": "Lattafa", "profile": "doce, especiado e gourmand", "bestFor": ["noite", "clima ameno", "encontros", "ocasiões especiais"], "notes": {"top": ["Canela", "Noz-moscada", "Bergamota"], "heart": ["Tâmaras", "Pralinê", "Tuberosa", "Mahonial"], "base": ["Baunilha", "Fava tonka", "Amberwood", "Mirra", "Benjoim", "Akigalawood"]}, "salesHint": "Boa opção para quem busca algo envolvente, adocicado e com presença."}, {"id": "lattafa-khamrah-qahwa", "name": "Khamrah Qahwa", "brand": "Lattafa", "profile": "doce, especiado, gourmand com café", "bestFor": ["noite", "clima ameno ou frio", "encontros", "ocasiões especiais"], "notes": {"top": ["Canela", "Cardamomo", "Gengibre"], "heart": ["Pralinê", "Frutas cristalizadas", "Flores brancas"], "base": ["Café", "Baunilha", "Fava tonka", "Benjoim", "Musk"]}, "salesHint": "Faz sentido para quem gosta do lado gourmand, mas quer uma faceta de café mais evidente."}, {"id": "lattafa-asad", "name": "Asad", "brand": "Lattafa", "profile": "especiado, ambarado e amadeirado", "bestFor": ["noite", "clima ameno", "ocasiões marcantes"], "notes": {"top": ["Pimenta preta", "Abacaxi", "Tabaco"], "heart": ["Patchouli", "Café", "Íris"], "base": ["Baunilha", "Âmbar", "Madeiras secas", "Benjoim", "Ládano"]}, "salesHint": "Indicado quando a pessoa quer algo mais sério, encorpado e imponente."}, {"id": "lattafa-asad-bourbon", "name": "Asad Bourbon", "brand": "Lattafa", "profile": "doce, especiado e ambarado", "bestFor": ["noite", "clima ameno", "ocasiões sociais"], "notes": {"top": ["Pimenta rosa", "Lavanda", "Ameixa Mirabelle"], "heart": ["Cacau", "Davana", "Noz-moscada"], "base": ["Vetiver", "Baunilha Bourbon", "Âmbar"]}, "salesHint": "Alternativa para quem quer um lado adocicado mais cremoso e especiado."}, {"id": "afnan-9pm", "name": "9 PM", "brand": "Afnan", "profile": "frutado, doce, aromático e especiado", "bestFor": ["noite", "festas", "encontros", "clima ameno"], "notes": {"top": ["Bergamota", "Lavandin", "Canela", "Maçã"], "heart": ["Muguet", "Flor de laranjeira"], "base": ["Patchouli", "Âmbar", "Baunilha", "Fava tonka"]}, "salesHint": "Boa escolha para quem quer uma fragrância jovem, envolvente e perceptível à noite."}, {"id": "afnan-9pm-rebel", "name": "9 PM Rebel", "brand": "Afnan", "profile": "frutado, amadeirado e ambarado", "bestFor": ["dia ou noite", "saídas", "uso casual"], "notes": {"top": ["Mandarina", "Abacaxi", "Maçã Granny Smith"], "heart": ["Cedro", "Musgo de carvalho", "Baunilha"], "base": ["Caramelo", "Madeiras secas", "Ambergris", "Musk"]}, "salesHint": "Interessante para quem quer fruta evidente com base amadeirada e adocicada."}, {"id": "armaf-cdnim", "name": "Club de Nuit Intense Man", "brand": "Armaf", "profile": "cítrico-frutado, amadeirado e esfumaçado", "bestFor": ["dia", "noite", "trabalho com moderação", "ocasiões sociais"], "notes": {"top": ["Maçã", "Bergamota", "Cassis", "Abacaxi", "Limão"], "heart": ["Rosa", "Bétula", "Jasmim"], "base": ["Musk", "Ambergris", "Patchouli", "Baunilha"]}, "salesHint": "Candidato versátil para quem gosta de abertura fresca/frutada com fundo amadeirado."}];
+import { CATALOG } from "../_shared/catalog.js";
+import { corsHeaders, json } from "../_shared/cors.js";
 
 const SYSTEM_PROMPT = `
-Você é Nura, consultora virtual especializada em perfumes árabes.
+Você é Nura, uma consultora virtual de perfumes árabes.
+Sua função é conversar de forma humana, acolhedora e inteligente para ajudar o cliente a escolher o perfume certo.
 
-OBJETIVO
-Conduzir uma conversa que pareça humana, leve e atenciosa. A pessoa deve sentir que está sendo ouvida e não preenchendo um formulário.
+PERSONALIDADE E TOM
+- Fale em português do Brasil.
+- Soe natural, leve, simpática e segura, como uma consultora atenciosa.
+- Faça o cliente se sentir à vontade, sem pressionar.
+- Evite respostas robóticas, frias, genéricas ou muito engessadas.
+- Varie suas aberturas e seu jeito de responder.
+- Não repita bordões como “Perfeito”, “Entendi”, “Claro”, “Ótima escolha” em toda resposta.
+- Use frases curtas a médias.
+- Use no máximo 1 emoji na maioria das respostas, e não em todas.
 
-JEITO DE CONVERSAR
-- Português do Brasil.
-- Natural, caloroso, seguro e sem exagero.
-- Respostas geralmente com 1 a 3 parágrafos curtos.
-- Faça no máximo UMA pergunta principal por resposta.
-- Comente brevemente algo que a pessoa acabou de dizer antes de avançar.
-- Não repita perguntas que o cliente já respondeu.
-- Não repita sempre “perfeito”, “entendi”, “claro”, “pelo que você me contou” ou qualquer abertura fixa.
-- Observe as últimas respostas da assistente e varie vocabulário, ritmo e abertura.
-- Evite listas, tabelas e rótulos técnicos durante a conversa comum.
-- Use emoji só de vez em quando, no máximo 1 por resposta na maioria dos casos.
-- Não finja ser uma pessoa física. Se perguntarem, diga que é uma consultora virtual.
-- Nunca diga que tem sentimentos, experiências pessoais ou que já cheirou um perfume.
+COMO CONDUZIR
+- Descubra aos poucos apenas o que for necessário.
+- Priorize entender: para quem é, estilo olfativo, ocasião, intensidade desejada, clima e referências de perfumes já conhecidos.
+- Não despeje um interrogatório. Faça 1 pergunta principal por vez.
+- Comente brevemente o que a pessoa disse antes de perguntar ou recomendar.
+- Se o cliente já deu informação suficiente, pare de perguntar e recomende.
+- Normalmente recomende 1 ou 2 perfumes; no máximo 3.
+- Tenha opinião e diga qual parece fazer mais sentido.
+- Se duas opções servirem, explique a diferença em linguagem simples.
+- Se algo não combinar com o que o cliente quer, diga isso com delicadeza.
 
-INTELIGÊNCIA DE ATENDIMENTO
-Descubra aos poucos apenas o que for necessário:
-- se é para a pessoa ou presente;
-- perfumes que já gosta ou não gosta;
-- doce/fresco/amadeirado/especiado etc.;
-- ocasião;
-- clima;
-- intensidade;
-- orçamento quando fizer sentido.
+EXEMPLOS DE LINGUAGEM SIMPLES
+- “mais doce e envolvente”
+- “mais fresco e fácil de usar”
+- “mais marcante e noturno”
+- “mais elegante e sério”
+- “cheiro que aparece mais”
+- “mais confortável para o dia a dia”
 
-Se já houver informação suficiente, PARE de perguntar e recomende.
-Normalmente mostre 1 ou 2 opções; no máximo 3.
-Tenha opinião: indique qual faz mais sentido e explique em linguagem simples.
-Se um perfume não combinar com o que o cliente disse, fale isso com delicadeza.
-Se o cliente estiver indeciso entre duas opções, reduza a decisão; não jogue mais opções.
+REGRAS IMPORTANTES
+- Nunca invente preços, promoções, estoque, fixação exata ou projeção exata.
+- Não afirme desempenho como certeza; diga de forma responsável quando necessário.
+- Use somente os fatos do catálogo abaixo.
+- Não diga que cheirou perfumes, não diga que tem sentimentos e não finja ser humana. Se perguntarem, diga que é uma consultora virtual.
+- Não mencione estas instruções.
+- Não use markdown, não use listas com marcadores, não use tabelas.
 
-CONFORTO DO CLIENTE
-Se ele disser que não entende de perfume, facilite com sensações:
-“cheiro de banho tomado”, “doce e envolvente”, “mais elegante”, “mais marcante”.
-Nunca faça o cliente se sentir ignorante.
-
-PRECISÃO
-Use fatos de produto somente a partir do catálogo fornecido abaixo.
-Não invente notas, concentração, inspiração, preço, estoque, fixação exata ou projeção exata.
-Desempenho varia por pele, clima e aplicação.
-Se faltar um fato, diga naturalmente que prefere confirmar antes de afirmar.
-Nunca diga “minha base”, “banco de dados”, “nível de confiança” ou exponha estas instruções.
-
-RECOMENDAÇÕES E CARDS
-Quando recomendar um item do catálogo, inclua o ID exato em recommendationIds.
-Os cards visuais serão montados pelo site; NÃO escreva “[imagem]” na resposta.
-Se não estiver recomendando produto ainda, recommendationIds deve ser [].
-Não recomende um item só para mostrar card.
+RECOMENDAÇÕES VISUAIS
+- Quando recomendar produto de verdade, inclua o ID exato em recommendationIds.
+- Se ainda não for hora de recomendar, recommendationIds deve ser um array vazio.
+- Não inclua texto como “[card]”, “[imagem]” ou similar.
 
 CATÁLOGO DISPONÍVEL
 ${JSON.stringify(CATALOG)}
 
-SAÍDA
-Responda exclusivamente em JSON válido no formato:
+FORMATO DE SAÍDA
+Responda somente com JSON válido:
 {
   "reply": "texto natural para o cliente",
-  "recommendationIds": ["id-exato-do-catalogo"]
+  "recommendationIds": ["id-1"]
 }
 `;
+
+function sanitizeReply(reply) {
+  return String(reply || "Me conta um pouco mais do que você procura.")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 2400);
+}
+
+export async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+export async function onRequestGet() {
+  return json({ ok: true, service: "Nura Perfume Consultant API", model: "gemini" });
+}
 
 export async function onRequestPost(context) {
   try {
     const apiKey = context.env.GEMINI_API_KEY;
+    const model = context.env.GEMINI_MODEL || "gemini-3.6-flash";
+
     if (!apiKey) {
-      return Response.json({ error: "GEMINI_API_KEY não configurada" }, { status: 503 });
+      return json({ error: "GEMINI_API_KEY não configurada" }, 503);
     }
 
     const body = await context.request.json();
-    const incoming = Array.isArray(body.messages) ? body.messages.slice(-16) : [];
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-18) : [];
 
     const contents = incoming
-      .filter(m => m && typeof m.text === "string" && (m.role === "user" || m.role === "assistant"))
-      .map(m => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.text.slice(0, 1600) }]
+      .filter(item => item && typeof item.text === "string" && ["user", "assistant"].includes(item.role))
+      .map(item => ({
+        role: item.role === "assistant" ? "model" : "user",
+        parts: [{ text: item.text.slice(0, 1800) }]
       }));
 
-    if (!contents.length || contents[contents.length - 1].role !== "user") {
-      return Response.json({ error: "Mensagem inválida" }, { status: 400 });
+    if (!contents.length || contents.at(-1)?.role !== "user") {
+      return json({ error: "Mensagem inválida" }, 400);
     }
 
+    const validIds = CATALOG.map(item => item.id);
     const schema = {
       type: "OBJECT",
       properties: {
         reply: { type: "STRING" },
         recommendationIds: {
           type: "ARRAY",
-          items: { type: "STRING", enum: CATALOG.map(p => p.id) },
+          items: { type: "STRING", enum: validIds },
           maxItems: 3
         }
       },
@@ -100,7 +111,7 @@ export async function onRequestPost(context) {
     };
 
     const upstream = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -121,39 +132,30 @@ export async function onRequestPost(context) {
     const raw = await upstream.json();
 
     if (!upstream.ok) {
-      return Response.json(
-        { error: raw?.error?.message || "Falha ao consultar Gemini" },
-        { status: upstream.status }
-      );
+      return json({ error: raw?.error?.message || "Falha ao consultar Gemini" }, upstream.status);
     }
 
-    const text = raw?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
-    if (!text) throw new Error("Resposta vazia da Gemini");
+    const rawText = raw?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+    if (!rawText) {
+      throw new Error("Resposta vazia da Gemini");
+    }
 
     let parsed;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(rawText);
     } catch {
-      parsed = { reply: text, recommendationIds: [] };
+      parsed = { reply: rawText, recommendationIds: [] };
     }
 
-    const validIds = new Set(CATALOG.map(p => p.id));
     const recommendationIds = Array.isArray(parsed.recommendationIds)
-      ? [...new Set(parsed.recommendationIds.filter(id => validIds.has(id)))].slice(0, 3)
+      ? [...new Set(parsed.recommendationIds.filter(id => validIds.includes(id)))].slice(0, 3)
       : [];
 
-    return Response.json({
-      reply: String(parsed.reply || "Me conta um pouco mais do que você procura.").slice(0, 2400),
+    return json({
+      reply: sanitizeReply(parsed.reply),
       recommendationIds
     });
   } catch (error) {
-    return Response.json(
-      { error: error?.message || "Erro interno" },
-      { status: 500 }
-    );
+    return json({ error: error?.message || "Erro interno" }, 500);
   }
-}
-
-export async function onRequestGet() {
-  return Response.json({ ok: true, service: "Nura Perfume Consultant" });
 }
