@@ -55,7 +55,7 @@ async function init() {
   }
 
   input.focus({ preventScroll: true });
-  scrollBottom();
+  scrollBottom(true);
 }
 
 function appendMessage(role, text, save = true) {
@@ -110,10 +110,13 @@ function renderRecommendationCards(ids = []) {
     img.alt = `${product.name}, ${product.brand}`;
     img.loading = "lazy";
     img.referrerPolicy = "no-referrer";
+    img.addEventListener("load", () => scrollBottom(true), { once: true });
     img.addEventListener("error", () => {
       if (product.fallbackImage && img.src !== new URL(product.fallbackImage, location.href).href) {
         img.src = product.fallbackImage;
+        return;
       }
+      scrollBottom(true);
     }, { once: true });
 
     imageWrap.append(img, badge);
@@ -157,15 +160,22 @@ function renderRecommendationCards(ids = []) {
   }
 
   chat.appendChild(wrap);
-  scrollBottom();
+  scrollBottom(true);
+  setTimeout(() => scrollBottom(true), 100);
+  setTimeout(() => scrollBottom(true), 350);
 }
 
 function persist() {
   sessionStorage.setItem("nuraConversation", JSON.stringify(messages.slice(-30)));
 }
 
-function scrollBottom() {
-  requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+function scrollBottom(smooth = false) {
+  requestAnimationFrame(() => {
+    chat.scrollTo({
+      top: chat.scrollHeight,
+      behavior: smooth ? "smooth" : "auto"
+    });
+  });
 }
 
 function setBusy(value) {
