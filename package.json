@@ -1,0 +1,10 @@
+{
+  "name": "nura-perfume-consultora",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev public --compatibility-date=2026-08-01"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

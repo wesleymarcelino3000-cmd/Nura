@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Consultora virtual humanizada de perfumes árabes." />
+  <meta name="theme-color" content="#17130f" />
+  <title>Nura • Consultora de Perfumes Árabes</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="chat-card" aria-label="Atendimento de perfumes">
+      <header class="topbar">
+        <div class="avatar" aria-hidden="true">N</div>
+        <div class="topbar-copy">
+          <div class="name-row">
+            <h1>Nura</h1>
+            <span class="online-dot" title="Online"></span>
+          </div>
+          <p>Consultora de perfumes árabes</p>
+        </div>
+        <button id="resetBtn" class="ghost-btn" type="button" title="Nova conversa">↻</button>
+      </header>
+
+      <div id="modeBanner" class="mode-banner hidden" role="status"></div>
+
+      <div id="chat" class="chat" aria-live="polite">
+        <div class="message assistant">
+          <div class="bubble">
+            Oi 😊 Que bom ter você por aqui. Eu posso te ajudar a encontrar um perfume que combine com seu estilo, mesmo que você não entenda nada de perfumaria. É para você ou para presente?
+          </div>
+        </div>
+        <div class="quick-replies" id="initialChips">
+          <button data-quick="É para mim">É para mim</button>
+          <button data-quick="É para presente">É para presente</button>
+          <button data-quick="Quero só conhecer algumas opções">Quero conhecer opções</button>
+        </div>
+      </div>
+
+      <div id="typing" class="typing hidden" aria-label="Nura está digitando">
+        <span></span><span></span><span></span>
+      </div>
+
+      <form id="composer" class="composer">
+        <textarea id="input" rows="1" maxlength="1200" placeholder="Me conta o que você procura..." aria-label="Sua mensagem"></textarea>
+        <button id="sendBtn" type="submit" aria-label="Enviar mensagem">➜</button>
+      </form>
+      <footer class="footer-note">As recomendações são orientativas: gosto e desempenho variam de pessoa para pessoa.</footer>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
