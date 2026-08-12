@@ -15,7 +15,8 @@
   frame.src = `${origin}/?embed=1`;
   frame.title = "Nura - Consultora de Perfumes";
   frame.setAttribute("loading", "lazy");
-  frame.style.cssText = `display:none;width:min(420px,calc(100vw - 24px));height:min(720px,calc(100vh - 92px));border:0;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.24);background:#fff;margin-bottom:12px;`;
+  frame.setAttribute("allow", "microphone");
+  frame.style.cssText = `display:none;width:min(420px,calc(100vw - 18px));height:min(720px,calc(100dvh - 86px));border:0;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.24);background:#fff;margin-bottom:12px;`;
 
   const button = document.createElement("button");
   button.type = "button";

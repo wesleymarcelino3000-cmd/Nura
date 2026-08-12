@@ -1,57 +1,5 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Widget da Nura para atendimento em sites." />
-  <meta name="theme-color" content="#120f0d" />
-  <title>Nura Widget</title>
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body class="widget-mode" data-mode="widget">
-  <main class="layout-shell layout-shell--widget">
-    <section class="chat-panel chat-panel--widget" aria-label="Atendimento da Nura">
-      <header class="topbar topbar--compact">
-        <div class="topbar__identity">
-          <div class="avatar" aria-hidden="true">N</div>
-          <div>
-            <div class="name-row">
-              <h2>Nura</h2>
-              <span class="online-dot" title="Online"></span>
-            </div>
-            <p>Consultora virtual</p>
-          </div>
-        </div>
-        <button id="resetBtn" class="ghost-btn" type="button">Limpar</button>
-      </header>
-
-      <div id="modeBanner" class="mode-banner hidden" role="status"></div>
-
-      <div id="chat" class="chat chat--widget" aria-live="polite">
-        <div class="message assistant">
-          <div class="bubble">
-            Oi 😊 Posso te ajudar a escolher um perfume. Ele é para você ou para presente?
-          </div>
-        </div>
-        <div class="quick-replies" id="initialChips">
-          <button data-quick="É para mim">É para mim</button>
-          <button data-quick="É para presente">É para presente</button>
-          <button data-quick="Quero sugestões">Quero sugestões</button>
-        </div>
-      </div>
-
-      <div id="typing" class="typing hidden" aria-label="Nura está digitando">
-        <span></span><span></span><span></span>
-      </div>
-
-      <form id="composer" class="composer composer--widget">
-        <label class="sr-only" for="input">Sua mensagem</label>
-        <textarea id="input" rows="1" maxlength="1200" placeholder="Digite sua mensagem..." aria-label="Sua mensagem"></textarea>
-        <button id="sendBtn" type="submit" aria-label="Enviar mensagem">Enviar</button>
-      </form>
-    </section>
-  </main>
-
-  <script src="/app.js" defer></script>
-</body>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nura</title></head>
+<body><script>location.replace("/?embed=1");</script></body>
 </html>

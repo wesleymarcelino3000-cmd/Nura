@@ -1,103 +1,81 @@
-# Nura — Consultora de Perfumes Árabes
+# Nura V3 — Consultora de Perfumes Árabes
 
-Versão 2: interface premium, atendimento humanizado, cards de produtos com fotos reais e integração aberta para outros sites.
+Versão ampliada da Nura, preparada para Cloudflare Pages + Gemini API.
 
-## O que esta versão tem
+## Principais melhorias da V3
 
-- Chat responsivo para desktop e celular.
-- Prompt de atendimento com linguagem natural e anti-repetição.
-- Memória da conversa durante a sessão.
-- Recomendações visuais com imagem, marca e perfil.
-- Botões “Gostei desse” e “Quero comparar”.
-- Fotos reais de Afnan 9 PM, Afnan 9 PM Rebel e Armaf Club de Nuit Intense Man armazenadas no próprio projeto a partir das páginas das marcas.
-- Os itens Lattafa usam imagens reais remotas com ilustração local de fallback caso a fonte bloqueie hotlink.
-- `/api/chat` para conversar com a Nura a partir de qualquer site.
-- `/api/catalog` para consultar o catálogo em JSON.
-- CORS habilitado para integração externa.
-- `embed.js` para colocar a Nura como botão flutuante em qualquer site.
-- A chave `GEMINI_API_KEY` permanece no Cloudflare; nunca é enviada ao navegador.
+- catálogo curado ampliado para 26 perfumes de várias casas árabes;
+- regras anti-repetição para não recomendar sempre os mesmos produtos;
+- Gemini 3.6 Flash como modelo padrão;
+- respostas sugeridas em botões para deixar a conversa mais natural;
+- memória maior da conversa;
+- envio de mensagem por áudio real;
+- o áudio é convertido para WAV no navegador e enviado ao Gemini para compreensão/transcrição;
+- a Nura pode falar suas respostas usando a voz disponível no navegador, sem API adicional;
+- botão para ligar/desligar a voz;
+- mobile redesenhado;
+- correção de rolagem dos cards e imagens;
+- widget para outros sites com permissão de microfone;
+- API pública do projeto continua disponível em `/api/chat` e `/api/catalog`.
 
-## Configuração no Cloudflare Pages
+## Áudio
 
-Build output directory: `public`
+O usuário toca no microfone, grava e toca novamente para enviar.
 
-A pasta `functions/` deve permanecer na raiz do repositório.
+O navegador pede permissão para o microfone. O áudio é processado no próprio navegador para WAV e enviado ao endpoint `/api/chat`.
 
-Adicione em **Settings > Variables and Secrets**:
+A gravação é limitada a 45 segundos no frontend.
 
-`GEMINI_API_KEY` = sua chave da Gemini
+## Voz da Nura
 
-Opcionalmente:
+O botão de alto-falante no topo ativa/desativa a leitura das respostas.
 
-`GEMINI_MODEL` = `gemini-3.6-flash`
+A síntese usa `speechSynthesis` do navegador. Não exige outra chave ou serviço pago.
 
-Depois faça um novo deploy.
+A qualidade/timbre da voz depende das vozes instaladas no dispositivo/navegador.
 
-## Colocar a Nura em outro site — modo mais fácil
+## Gemini
 
-Quando seu domínio do Pages estiver pronto, por exemplo:
+Variável obrigatória no Cloudflare:
 
-`https://nura.pages.dev`
+`GEMINI_API_KEY`
 
-cole antes de `</body>` em qualquer site:
+Variável opcional:
+
+`GEMINI_MODEL`
+
+Se não existir, o sistema usa:
+
+`gemini-3.6-flash`
+
+## Cloudflare Pages
+
+- build output: `public`
+- branch: `main`
+- pasta `functions/` na raiz
+- secret `GEMINI_API_KEY`
+
+## Integração em outros sites
 
 ```html
 <script
-  src="https://nura.pages.dev/embed.js"
-  data-label="Escolha seu perfume"
-  data-position="right"
-  data-accent="#171411">
+  src="https://SEU-DOMINIO.pages.dev/embed.js"
+  data-label="Escolha seu perfume">
 </script>
 ```
 
-Isso cria um botão flutuante e abre a Nura em uma janela de atendimento.
+O script já cria o iframe com permissão de microfone.
 
-### Personalização
+## Catálogo e imagens
 
-- `data-label`: texto do botão.
-- `data-position`: `right` ou `left`.
-- `data-accent`: cor do botão em hexadecimal.
+Os produtos originais da V2 mantêm as imagens já configuradas.
 
-## Integrar diretamente pela API
+Os novos produtos adicionados na V3 usam ilustrações de catálogo locais com nome e marca para evitar hotlink inseguro. Substitua essas ilustrações por fotos reais/licenciadas dos seus produtos quando desejar.
 
-### Catálogo
+Arquivos dos novos produtos:
 
-```http
-GET https://nura.pages.dev/api/catalog
-```
+`public/images/catalog/`
 
-### Conversa
+## Importante
 
-```http
-POST https://nura.pages.dev/api/chat
-Content-Type: application/json
-```
-
-Body:
-
-```json
-{
-  "messages": [
-    {"role":"user","text":"Quero um perfume doce para sair à noite"}
-  ]
-}
-```
-
-Resposta:
-
-```json
-{
-  "reply":"...",
-  "recommendationIds":["afnan-9pm"]
-}
-```
-
-O site que integrar a API pode buscar os detalhes visuais do perfume em `/api/catalog` usando os IDs retornados.
-
-## Segurança antes de alto volume
-
-A API está aberta para facilitar testes e integração entre sites. Antes de divulgar em grande escala, é recomendado adicionar rate limiting e, se necessário, restringir as origens autorizadas para evitar que terceiros consumam sua cota da Gemini.
-
-## Fotos dos seus próprios produtos
-
-Quando você tiver fotos reais do seu estoque, o ideal é substituir as imagens remotas pelas suas próprias imagens em `public/images/`. Isso evita depender de servidores de terceiros e permite mostrar exatamente o produto vendido pela sua loja.
+A Nura foi orientada a conversar sobre um universo de marcas árabes maior que os cards do catálogo. Para fatos muito específicos que não estejam no catálogo, ela deve evitar inventar informações.

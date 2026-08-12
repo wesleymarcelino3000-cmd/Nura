@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="description" content="Nura, sua consultora virtual de perfumes árabes." />
   <meta name="theme-color" content="#171411" />
   <title>Nura • Consultora de Perfumes Árabes</title>
@@ -20,15 +20,13 @@
         </div>
         <div class="brand-proof">
           <span>✦</span>
-          <p>Recomendações personalizadas, sem empurrar produto.</p>
+          <p>Recomendações personalizadas entre diferentes casas árabes, sem empurrar produto.</p>
         </div>
       </aside>
 
       <section class="chat-card">
         <header class="topbar">
-          <div class="consultant-avatar" aria-hidden="true">
-            <span>N</span>
-          </div>
+          <div class="consultant-avatar" aria-hidden="true"><span>N</span></div>
           <div class="topbar-copy">
             <div class="name-row">
               <h1>Nura</h1>
@@ -36,9 +34,14 @@
             </div>
             <p>Consultora virtual de perfumes árabes</p>
           </div>
-          <button id="resetBtn" class="new-chat-btn" type="button" title="Iniciar nova conversa">
-            <span class="desktop-label">Nova conversa</span><span class="mobile-label">↻</span>
-          </button>
+          <div class="topbar-actions">
+            <button id="voiceToggle" class="icon-btn voice-toggle" type="button" title="Ativar voz da Nura" aria-label="Ativar voz da Nura" aria-pressed="false">
+              <span class="voice-off">🔈</span><span class="voice-on">🔊</span>
+            </button>
+            <button id="resetBtn" class="new-chat-btn" type="button" title="Iniciar nova conversa">
+              <span class="desktop-label">Nova conversa</span><span class="mobile-label">↻</span>
+            </button>
+          </div>
         </header>
 
         <div id="modeBanner" class="mode-banner hidden" role="status"></div>
@@ -47,14 +50,12 @@
           <div class="intro-card" id="introCard">
             <span class="intro-pill">Atendimento personalizado</span>
             <h3>Vamos encontrar um perfume com a sua cara?</h3>
-            <p>Você não precisa saber nomes de notas ou famílias olfativas. Me explica do seu jeito e eu te guio.</p>
+            <p>Você pode digitar ou mandar um áudio. Não precisa saber nomes de notas — me explica do seu jeito.</p>
           </div>
 
           <div class="message assistant">
             <div class="assistant-mini-avatar">N</div>
-            <div class="bubble">
-              Oi 😊 É um prazer te receber. Para começar bem: o perfume é para você ou para presentear alguém?
-            </div>
+            <div class="bubble">Oi 😊 É um prazer te receber. Para começar bem: o perfume é para você ou para presentear alguém?</div>
           </div>
 
           <div class="quick-replies" id="initialChips">
@@ -69,12 +70,21 @@
           <div class="typing-bubble"><span></span><span></span><span></span></div>
         </div>
 
+        <div id="audioStatus" class="audio-status hidden" role="status">
+          <span class="record-dot"></span>
+          <span id="audioStatusText">Gravando áudio… toque no microfone para enviar.</span>
+          <span id="recordTimer">0:00</span>
+        </div>
+
         <form id="composer" class="composer">
+          <button id="micBtn" class="mic-btn" type="button" aria-label="Gravar áudio" title="Gravar áudio">
+            <span class="mic-icon">🎙️</span>
+          </button>
           <div class="input-wrap">
             <textarea id="input" rows="1" maxlength="1200" placeholder="Me conta o que você procura..." aria-label="Sua mensagem"></textarea>
             <span class="input-hint">Enter para enviar</span>
           </div>
-          <button id="sendBtn" type="submit" aria-label="Enviar mensagem">➜</button>
+          <button id="sendBtn" class="send-btn" type="submit" aria-label="Enviar mensagem">➜</button>
         </form>
 
         <footer class="footer-note">A Nura orienta sua escolha; percepção e desempenho podem variar de pessoa para pessoa.</footer>
