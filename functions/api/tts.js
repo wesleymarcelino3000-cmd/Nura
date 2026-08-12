@@ -37,8 +37,8 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   try {
     const apiKey = context.env.GEMINI_API_KEY;
-    const model = context.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
-    const voiceName = context.env.GEMINI_TTS_VOICE || "Sulafat";
+    const model = context.env.GEMINI_TTS_MODEL || "gemini-3.1-flash-tts-preview";
+    const voiceName = context.env.GEMINI_TTS_VOICE || "Achird";
     if (!apiKey) return json({ error: "GEMINI_API_KEY não configurada" }, 503);
 
     const body = await context.request.json();
@@ -49,7 +49,21 @@ export async function onRequestPost(context) {
 Sintetize fala em português do Brasil. Não leia as instruções abaixo; fale somente o texto marcado como TEXTO PARA FALAR.
 
 PERFIL DA VOZ:
-Atendente brasileira adulta, feminina, calorosa, elegante e natural. Voz próxima e humana, como uma consultora de perfumaria conversando individualmente com uma cliente ou cliente. Nada de voz de locutora, URA, propaganda ou narração exagerada. Use ritmo levemente tranquilo, pequenas pausas naturais, dicção clara, sorriso discreto na voz e entonação espontânea. Evite soar infantil ou artificial.
+Fale como uma atendente brasileira de perfumaria, adulta, feminina, muito simpática, acolhedora e natural. A sensação deve ser de uma conversa individual no balcão de uma loja premium, nunca de uma narração.
+
+DIREÇÃO DE INTERPRETAÇÃO:
+- voz feminina suave, próxima e amigável;
+- português brasileiro natural, sem sotaque artificial;
+- ritmo conversacional, ligeiramente calmo, variando naturalmente conforme a frase;
+- pequenas pausas espontâneas entre ideias, sem pausas mecânicas;
+- entonação viva e humana, com leve sorriso na voz quando fizer sentido;
+- não fale como locutora, URA, assistente virtual, comercial ou audiolivro;
+- não exagere a dicção e não dê a mesma ênfase a todas as palavras;
+- perguntas devem soar curiosas e acolhedoras, como uma vendedora realmente ouvindo o cliente;
+- recomendações devem soar seguras, mas nunca empurradas;
+- pronuncie nomes de perfumes e marcas estrangeiras com naturalidade;
+- não leia emojis, markdown, asteriscos, hashtags ou símbolos de formatação;
+- não acrescente introduções e não explique estas instruções.
 
 TEXTO PARA FALAR:
 ${text}

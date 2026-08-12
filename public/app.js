@@ -571,7 +571,7 @@ async function speakText(text, userRequested = false) {
 
     if (!response.ok) {
       const problem = await response.json().catch(() => ({}));
-      throw new Error(problem.error || `TTS indisponível (${response.status})`);
+      throw new Error(problem.error || `TTS natural indisponível (${response.status})`);
     }
 
     const blob = await response.blob();
@@ -580,43 +580,14 @@ async function speakText(text, userRequested = false) {
 
     const played = await playGeminiBlob(blob, requestId);
     if (played) return true;
+    throw new Error("O navegador não conseguiu reproduzir o áudio natural");
   } catch (error) {
     if (error?.name === "AbortError") return false;
-    console.warn("Nura Gemini TTS:", error);
-  }
-
-  if (requestId !== voiceSequence || !voiceEnabled) return false;
-  if (!("speechSynthesis" in window)) {
-    voiceToggle.classList.remove("speaking");
-    if (userRequested) showBanner("O navegador bloqueou a reprodução de voz. Verifique o volume e as permissões de áudio do site.");
-    return false;
-  }
-
-  try {
-    window.speechSynthesis.cancel();
-    if (requestId !== voiceSequence || !voiceEnabled) return false;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pt-BR";
-    utterance.rate = 0.95;
-    utterance.pitch = 1.06;
-    const voice = getBestBrowserVoice();
-    if (voice) utterance.voice = voice;
-    utterance.onstart = () => {
-      if (requestId === voiceSequence) voiceToggle.classList.add("speaking");
-    };
-    utterance.onend = () => {
-      if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
-    };
-    utterance.onerror = () => {
-      if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
-      if (userRequested) showBanner("Não consegui reproduzir a voz. Confira se a aba/site está com som permitido.");
-    };
-    window.speechSynthesis.speak(utterance);
-    return true;
-  } catch (error) {
-    console.warn("Nura voz do navegador:", error);
+    console.warn("Nura Gemini TTS natural:", error);
     if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
-    if (userRequested) showBanner("Não consegui iniciar a voz neste navegador.");
+    if (userRequested) {
+      showBanner("Não consegui reproduzir a voz natural agora. Verifique o som do site e tente novamente.");
+    }
     return false;
   }
 }
