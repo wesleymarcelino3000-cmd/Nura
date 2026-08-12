@@ -15,7 +15,7 @@ PERSONALIDADE
 - Comente o que a pessoa acabou de dizer antes de fazer a próxima pergunta.
 - Faça no máximo UMA pergunta principal por resposta.
 - Evite repetir bordões como "Perfeito", "Entendi", "Claro", "Ótima escolha" e "pelo que você me contou".
-- Respostas normais: 1 a 3 parágrafos curtos, como conversa de WhatsApp.
+- Respostas normais: prefira 1 ou 2 parágrafos curtos, geralmente de 2 a 4 frases no total. Seja completa sem falar demais.
 - Escreva pensando que a resposta também será FALADA em voz alta: frases naturais, curtas e fáceis de ouvir.
 - Prefira construções de fala brasileira cotidiana, como "me conta", "eu iria por", "isso já me dá uma pista", sem exagerar em gírias.
 - Evite listas, títulos, dois-pontos em excesso, parênteses longos e linguagem de relatório.
@@ -25,9 +25,20 @@ PERSONALIDADE
 FLUXO DE CONSULTORIA — OBRIGATÓRIO
 A Nura NÃO deve começar mostrando perfumes.
 
+ETAPA 0 — OBJETIVO DA COMPRA
+Primeiro entenda naturalmente se:
+- é para a própria pessoa;
+- é para presentear alguém;
+- ou ela quer algo parecido com um perfume que já usa/gosta.
+Registre isso em purpose como "self", "gift" ou "similar".
+Se o cliente já deixou isso claro, NÃO pergunte novamente.
+Não mostre card nesta etapa.
+
 ETAPA 1 — REFERÊNCIA PESSOAL
-Primeiro descubra se a pessoa já usou ou sentiu algum perfume de que gostou.
-- Pergunte o nome de um perfume que ela já gostou, de qualquer marca.
+Depois descubra uma referência de perfume/aroma.
+- Se purpose="similar", pergunte diretamente qual perfume ela quer usar como referência.
+- Se purpose="self", pergunte se existe algum perfume que ela já usou ou sentiu e gostou.
+- Se purpose="gift", pergunte se ela conhece algum perfume ou tipo de aroma de que a pessoa presenteada gosta.
 - Se não souber o nome ou nunca tiver tido um favorito, aceite isso naturalmente e marque referenceStatus como "none".
 - Se citar um perfume, marque referenceStatus como "known" e registre o nome em referencePerfume.
 - Não mostre card nesta etapa.
@@ -83,6 +94,7 @@ SUGESTÕES CLICÁVEIS
 PERFIL DO CLIENTE
 Atualize customerProfile em toda resposta. Preserve o que já sabe e só mude quando o cliente corrigir.
 Campos:
+- purpose: "self", "gift", "similar" ou vazio
 - referenceStatus: "unknown", "known" ou "none"
 - referencePerfume: nome ou vazio
 - aromaPreference: descrição curta ou vazio
@@ -127,7 +139,9 @@ function normalizeProfile(raw = {}, previous = {}) {
   const allowedStatus = new Set(["unknown", "known", "none"]);
   const merged = { ...previous, ...raw };
   const status = allowedStatus.has(merged.referenceStatus) ? merged.referenceStatus : "unknown";
+  const purpose = ["self", "gift", "similar"].includes(merged.purpose) ? merged.purpose : "";
   return {
+    purpose,
     referenceStatus: status,
     referencePerfume: clean(merged.referencePerfume, 160),
     aromaPreference: clean(merged.aromaPreference, 220),
@@ -200,6 +214,7 @@ export async function onRequestPost(context) {
         customerProfile: {
           type: "OBJECT",
           properties: {
+            purpose: { type: "STRING", enum: ["", "self", "gift", "similar"] },
             referenceStatus: { type: "STRING", enum: ["unknown", "known", "none"] },
             referencePerfume: { type: "STRING" },
             aromaPreference: { type: "STRING" },
@@ -207,7 +222,7 @@ export async function onRequestPost(context) {
             intensity: { type: "STRING" },
             dislikes: { type: "STRING" }
           },
-          required: ["referenceStatus", "referencePerfume", "aromaPreference", "occasion", "intensity", "dislikes"]
+          required: ["purpose", "referenceStatus", "referencePerfume", "aromaPreference", "occasion", "intensity", "dislikes"]
         }
       },
       required: ["reply", "recommendationIds", "suggestedReplies", "transcript", "consultationReady", "customerProfile"]

@@ -25,6 +25,7 @@ let recordingStartedAt = 0;
 let recordInterval = null;
 let recordTimeout = null;
 let customerProfile = {
+  purpose: "",
   referenceStatus: "unknown",
   referencePerfume: "",
   aromaPreference: "",
@@ -40,7 +41,7 @@ let voiceRequestController = null;
 let voiceSequence = 0;
 let initialVoiceSpoken = false;
 
-const initialAssistant = "Oi, eu sou a Nura. Antes de te indicar qualquer perfume, quero entender seu gosto de verdade. Tem algum perfume que você já usou e gostou muito? Pode ser de qualquer marca — e, se não lembrar o nome, me fala que eu te ajudo pelo aroma.";
+const initialAssistant = "Oi, eu sou a Nura. Me conta só uma coisa para eu te atender do jeito certo: o perfume é para você, para presentear alguém ou você quer encontrar algo parecido com um perfume que já gosta?";
 
 async function loadCatalog() {
   try {
@@ -515,6 +516,168 @@ function getBestBrowserVoice() {
     || null;
 }
 
+
+
+function base64ToUint8Array(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function pcm16BytesToFloat32(bytes) {
+  const usableLength = bytes.length - (bytes.length % 2);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, usableLength);
+  const samples = new Float32Array(usableLength / 2);
+
+  for (let i = 0; i < samples.length; i++) {
+    const sample = view.getInt16(i * 2, true);
+    samples[i] = sample < 0 ? sample / 32768 : sample / 32767;
+  }
+
+  return samples;
+}
+
+function schedulePcmChunk(bytes, requestId, state) {
+  if (requestId !== voiceSequence || !voiceEnabled) return false;
+
+  const ctx = ensureVoiceAudioContext();
+  if (!ctx) return false;
+
+  const samples = pcm16BytesToFloat32(bytes);
+  if (!samples.length) return true;
+
+  const buffer = ctx.createBuffer(1, samples.length, 24000);
+  buffer.copyToChannel(samples, 0);
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+
+  const now = ctx.currentTime;
+  const startAt = Math.max(now + 0.015, state.nextStartTime || 0);
+  source.start(startAt);
+
+  state.nextStartTime = startAt + buffer.duration;
+  state.lastSource = source;
+  currentVoiceSource = source;
+
+  // A primeira parte começa assim que chega, sem esperar o áudio inteiro.
+  if (!state.started) {
+    state.started = true;
+    voiceToggle.classList.add("speaking");
+  }
+
+  source.onended = () => {
+    if (currentVoiceSource === source) currentVoiceSource = null;
+  };
+
+  return true;
+}
+
+function extractAudioBase64FromSseEvent(payload) {
+  if (!payload || payload === "[DONE]") return [];
+
+  let obj;
+  try {
+    obj = JSON.parse(payload);
+  } catch {
+    return [];
+  }
+
+  const parts = obj?.candidates?.[0]?.content?.parts || [];
+  return parts
+    .map(part => part?.inlineData?.data || part?.inline_data?.data)
+    .filter(Boolean);
+}
+
+async function playNaturalVoiceStream(text, requestId, controller) {
+  const response = await fetch("/api/tts-stream", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text }),
+    signal: controller.signal
+  });
+
+  if (!response.ok || !response.body) {
+    const problem = await response.json().catch(() => ({}));
+    throw new Error(problem.error || `Streaming TTS indisponível (${response.status})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const state = {
+    nextStartTime: 0,
+    started: false,
+    lastSource: null
+  };
+
+  let pending = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (requestId !== voiceSequence || !voiceEnabled) {
+      try { await reader.cancel(); } catch {}
+      return false;
+    }
+
+    if (done) break;
+
+    pending += decoder.decode(value, { stream: true });
+
+    // SSE separa eventos por uma linha em branco.
+    const events = pending.split(/\r?\n\r?\n/);
+    pending = events.pop() || "";
+
+    for (const eventBlock of events) {
+      const dataLines = eventBlock
+        .split(/\r?\n/)
+        .filter(line => line.startsWith("data:"))
+        .map(line => line.slice(5).trim());
+
+      if (!dataLines.length) continue;
+
+      const payload = dataLines.join("");
+      const chunks = extractAudioBase64FromSseEvent(payload);
+
+      for (const base64 of chunks) {
+        const bytes = base64ToUint8Array(base64);
+        schedulePcmChunk(bytes, requestId, state);
+      }
+    }
+  }
+
+  // Alguns proxies podem não terminar com duas quebras de linha.
+  if (pending.trim()) {
+    const dataLines = pending
+      .split(/\r?\n/)
+      .filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trim());
+
+    if (dataLines.length) {
+      const chunks = extractAudioBase64FromSseEvent(dataLines.join(""));
+      for (const base64 of chunks) {
+        schedulePcmChunk(base64ToUint8Array(base64), requestId, state);
+      }
+    }
+  }
+
+  if (!state.started) {
+    throw new Error("A Gemini não enviou áudio no streaming");
+  }
+
+  // Mantém o indicador ativo até o último chunk programado terminar.
+  const ctx = ensureVoiceAudioContext();
+  if (ctx && state.nextStartTime > ctx.currentTime) {
+    const waitMs = Math.ceil((state.nextStartTime - ctx.currentTime) * 1000) + 40;
+    await new Promise(resolve => setTimeout(resolve, waitMs));
+  }
+
+  if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
+  return true;
+}
+
 async function playGeminiBlob(blob, requestId) {
   if (requestId !== voiceSequence || !voiceEnabled) return false;
 
@@ -589,18 +752,32 @@ async function speakText(text, userRequested = false) {
   unlockVoiceAudio();
   voiceToggle.classList.add("speaking");
 
+  const controller = new AbortController();
+  voiceRequestController = controller;
+
   try {
-    const controller = new AbortController();
-    voiceRequestController = controller;
+    // Caminho principal: Gemini 3.1 TTS em streaming.
+    // O áudio começa a tocar assim que o primeiro chunk PCM chega.
+    const streamed = await playNaturalVoiceStream(text, requestId, controller);
+    if (streamed) {
+      if (voiceRequestController === controller) voiceRequestController = null;
+      return true;
+    }
+  } catch (streamError) {
+    if (streamError?.name === "AbortError") return false;
+    console.warn("Nura TTS streaming:", streamError);
+  }
+
+  // Fallback: endpoint WAV completo, para não perder a voz se o streaming falhar.
+  if (requestId !== voiceSequence || !voiceEnabled) return false;
+
+  try {
     const response = await fetch("/api/tts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
       signal: controller.signal
     });
-
-    if (requestId !== voiceSequence || !voiceEnabled) return false;
-    voiceRequestController = null;
 
     if (!response.ok) {
       const problem = await response.json().catch(() => ({}));
@@ -613,13 +790,14 @@ async function speakText(text, userRequested = false) {
 
     const played = await playGeminiBlob(blob, requestId);
     if (played) return true;
-    throw new Error("O navegador não conseguiu reproduzir o áudio natural");
+
+    throw new Error("O navegador não conseguiu reproduzir a voz");
   } catch (error) {
     if (error?.name === "AbortError") return false;
-    console.warn("Nura Gemini TTS natural:", error);
+
+    console.warn("Nura TTS:", error);
     if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
 
-    // Na leitura automática também mostramos o problema, para a voz nunca falhar em silêncio.
     const message = String(error?.message || "");
     if (/limite|quota|429/i.test(message)) {
       showBanner("A voz natural atingiu o limite temporário da Gemini. Aguarde um pouco e ela volta automaticamente.");
@@ -630,6 +808,8 @@ async function speakText(text, userRequested = false) {
     }
 
     return false;
+  } finally {
+    if (voiceRequestController === controller) voiceRequestController = null;
   }
 }
 
