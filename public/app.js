@@ -121,7 +121,7 @@ function appendMessage(role, text, save = true) {
     listenBtn.textContent = "🔊";
     listenBtn.addEventListener("click", async () => {
       voiceEnabled = true;
-      localStorage.setItem("nuraVoiceEnabled", "1");
+      localStorage.setItem("nuraVoiceEnabledV2", "1");
       updateVoiceButton();
       await speakText(String(text ?? ""), true);
     });
@@ -585,9 +585,17 @@ async function speakText(text, userRequested = false) {
     if (error?.name === "AbortError") return false;
     console.warn("Nura Gemini TTS natural:", error);
     if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
-    if (userRequested) {
-      showBanner("Não consegui reproduzir a voz natural agora. Verifique o som do site e tente novamente.");
+
+    // Na leitura automática também mostramos o problema, para a voz nunca falhar em silêncio.
+    const message = String(error?.message || "");
+    if (/limite|quota|429/i.test(message)) {
+      showBanner("A voz natural atingiu o limite temporário da Gemini. Aguarde um pouco e ela volta automaticamente.");
+    } else if (/chave|autoriz|401|403|API/i.test(message)) {
+      showBanner("A voz natural não conseguiu acessar a Gemini. A chave/API de voz precisa ser verificada.");
+    } else {
+      showBanner("A voz natural não conseguiu tocar agora. Vou continuar respondendo por texto enquanto isso.");
     }
+
     return false;
   }
 }
