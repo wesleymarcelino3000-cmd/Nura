@@ -107,6 +107,23 @@ function appendMessage(role, text, save = true) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.textContent = String(text ?? "");
+
+  if (role === "assistant") {
+    const listenBtn = document.createElement("button");
+    listenBtn.type = "button";
+    listenBtn.className = "bubble-listen-btn";
+    listenBtn.title = "Ouvir esta resposta";
+    listenBtn.setAttribute("aria-label", "Ouvir esta resposta da Nura");
+    listenBtn.textContent = "🔊";
+    listenBtn.addEventListener("click", async () => {
+      voiceEnabled = true;
+      localStorage.setItem("nuraVoiceEnabled", "1");
+      updateVoiceButton();
+      await speakText(String(text ?? ""), true);
+    });
+    bubble.appendChild(listenBtn);
+  }
+
   row.appendChild(bubble);
   chat.appendChild(row);
 
@@ -346,6 +363,7 @@ form.addEventListener("submit", async event => {
     persist();
     renderRecommendationCards(demo.recommendationIds);
     renderSuggestedReplies(demo.suggestedReplies || []);
+    speakText(demo.reply);
 
     modeBanner.textContent = "Estou em modo demonstração. Configure a chave da Gemini no Cloudflare para usar a inteligência completa.";
     modeBanner.classList.remove("hidden");
@@ -367,11 +385,20 @@ function updateVoiceButton() {
   voiceToggle.title = voiceEnabled ? "Desativar voz da Nura" : "Ativar voz da Nura";
 }
 
-voiceToggle.addEventListener("click", () => {
+voiceToggle.addEventListener("click", async () => {
   voiceEnabled = !voiceEnabled;
   localStorage.setItem("nuraVoiceEnabled", voiceEnabled ? "1" : "0");
   updateVoiceButton();
-  if (!voiceEnabled) stopSpeaking();
+
+  if (!voiceEnabled) {
+    stopSpeaking();
+    showBanner("Voz da Nura desativada.");
+    return;
+  }
+
+  const lastAssistant = [...messages].reverse().find(item => item.role === "assistant");
+  showBanner("Voz ativada. Vou ler a última mensagem para você.");
+  await speakText(lastAssistant?.text || initialAssistant, true);
 });
 
 function stopSpeaking() {
@@ -401,8 +428,8 @@ function cleanupVoiceAudio() {
   voiceToggle.classList.remove("speaking");
 }
 
-async function speakText(text) {
-  if (!voiceEnabled || !text) return;
+async function speakText(text, userRequested = false) {
+  if (!voiceEnabled || !text) return false;
   stopSpeaking();
   voiceToggle.classList.add("speaking");
 
@@ -412,29 +439,57 @@ async function speakText(text) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text })
     });
-    if (!response.ok) throw new Error("TTS indisponível");
+
+    if (!response.ok) {
+      const problem = await response.json().catch(() => ({}));
+      throw new Error(problem.error || `TTS indisponível (${response.status})`);
+    }
+
     const blob = await response.blob();
+    if (!blob.size) throw new Error("A Gemini retornou áudio vazio");
+
     currentVoiceUrl = URL.createObjectURL(blob);
-    currentVoiceAudio = new Audio(currentVoiceUrl);
+    currentVoiceAudio = new Audio();
     currentVoiceAudio.preload = "auto";
+    currentVoiceAudio.playsInline = true;
+    currentVoiceAudio.src = currentVoiceUrl;
     currentVoiceAudio.addEventListener("ended", cleanupVoiceAudio, { once: true });
     currentVoiceAudio.addEventListener("error", cleanupVoiceAudio, { once: true });
+
     await currentVoiceAudio.play();
-    return;
-  } catch {
+    return true;
+  } catch (error) {
+    console.warn("Nura Gemini TTS:", error);
     cleanupVoiceAudio();
   }
 
-  if (!("speechSynthesis" in window)) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "pt-BR";
-  utterance.rate = 0.96;
-  utterance.pitch = 1.04;
-  const voice = getBestBrowserVoice();
-  if (voice) utterance.voice = voice;
-  utterance.onend = () => voiceToggle.classList.remove("speaking");
-  utterance.onerror = () => voiceToggle.classList.remove("speaking");
-  speechSynthesis.speak(utterance);
+  if (!("speechSynthesis" in window)) {
+    if (userRequested) showBanner("O navegador bloqueou a reprodução de voz. Verifique o volume e as permissões de áudio do site.");
+    return false;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 0.95;
+    utterance.pitch = 1.06;
+    const voice = getBestBrowserVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onstart = () => voiceToggle.classList.add("speaking");
+    utterance.onend = () => voiceToggle.classList.remove("speaking");
+    utterance.onerror = () => {
+      voiceToggle.classList.remove("speaking");
+      if (userRequested) showBanner("Não consegui reproduzir a voz. Confira se a aba/site está com som permitido.");
+    };
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (error) {
+    console.warn("Nura voz do navegador:", error);
+    voiceToggle.classList.remove("speaking");
+    if (userRequested) showBanner("Não consegui iniciar a voz neste navegador.");
+    return false;
+  }
 }
 
 /* ---------------- ÁUDIO DO CLIENTE ---------------- */
