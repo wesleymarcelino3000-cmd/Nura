@@ -17,7 +17,7 @@ if (params.get("embed") === "1") document.body.classList.add("embed");
 let catalog = [];
 let messages = [];
 let busy = false;
-let voiceEnabled = localStorage.getItem("nuraVoiceEnabled") !== "0";
+let voiceEnabled = localStorage.getItem("nuraVoiceEnabledV2") !== "0";
 let mediaRecorder = null;
 let mediaStream = null;
 let recordChunks = [];
@@ -34,6 +34,10 @@ let customerProfile = {
 };
 let currentVoiceAudio = null;
 let currentVoiceUrl = null;
+let currentVoiceSource = null;
+let voiceAudioContext = null;
+let voiceRequestController = null;
+let voiceSequence = 0;
 
 const initialAssistant = "Oi, eu sou a Nura. Antes de te indicar qualquer perfume, quero entender seu gosto de verdade. Tem algum perfume que você já usou e gostou muito? Pode ser de qualquer marca — e, se não lembrar o nome, me fala que eu te ajudo pelo aroma.";
 
@@ -382,28 +386,89 @@ resetBtn.addEventListener("click", () => {
 function updateVoiceButton() {
   voiceToggle.classList.toggle("active", voiceEnabled);
   voiceToggle.setAttribute("aria-pressed", String(voiceEnabled));
-  voiceToggle.title = voiceEnabled ? "Desativar voz da Nura" : "Ativar voz da Nura";
+  voiceToggle.title = voiceEnabled ? "Desativar voz automática da Nura" : "Ativar voz automática da Nura";
 }
+
+function ensureVoiceAudioContext() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!voiceAudioContext) voiceAudioContext = new AudioCtx();
+    if (voiceAudioContext.state === "suspended") voiceAudioContext.resume().catch(() => {});
+    return voiceAudioContext;
+  } catch {
+    return null;
+  }
+}
+
+function unlockVoiceAudio() {
+  const ctx = ensureVoiceAudioContext();
+  if (!ctx) return;
+  try {
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    source.buffer = buffer;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(0);
+  } catch {}
+}
+
+document.addEventListener("pointerdown", unlockVoiceAudio, { capture: true });
+document.addEventListener("keydown", unlockVoiceAudio, { capture: true });
 
 voiceToggle.addEventListener("click", async () => {
   voiceEnabled = !voiceEnabled;
-  localStorage.setItem("nuraVoiceEnabled", voiceEnabled ? "1" : "0");
+  localStorage.setItem("nuraVoiceEnabledV2", voiceEnabled ? "1" : "0");
   updateVoiceButton();
+  unlockVoiceAudio();
 
   if (!voiceEnabled) {
     stopSpeaking();
-    showBanner("Voz da Nura desativada.");
+    showBanner("Voz automática desativada.");
     return;
   }
 
   const lastAssistant = [...messages].reverse().find(item => item.role === "assistant");
-  showBanner("Voz ativada. Vou ler a última mensagem para você.");
+  showBanner("Voz automática ativada.");
   await speakText(lastAssistant?.text || initialAssistant, true);
 });
 
+function cancelCurrentVoicePlayback() {
+  if (voiceRequestController) {
+    try { voiceRequestController.abort(); } catch {}
+    voiceRequestController = null;
+  }
+
+  if (currentVoiceSource) {
+    try { currentVoiceSource.onended = null; currentVoiceSource.stop(0); } catch {}
+    try { currentVoiceSource.disconnect(); } catch {}
+    currentVoiceSource = null;
+  }
+
+  if (currentVoiceAudio) {
+    try { currentVoiceAudio.pause(); } catch {}
+    try { currentVoiceAudio.removeAttribute("src"); currentVoiceAudio.load(); } catch {}
+    currentVoiceAudio = null;
+  }
+
+  if (currentVoiceUrl) {
+    try { URL.revokeObjectURL(currentVoiceUrl); } catch {}
+    currentVoiceUrl = null;
+  }
+
+  if ("speechSynthesis" in window) {
+    try { window.speechSynthesis.cancel(); } catch {}
+  }
+
+  voiceToggle.classList.remove("speaking");
+}
+
 function stopSpeaking() {
-  cleanupVoiceAudio();
-  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  voiceSequence += 1;
+  cancelCurrentVoicePlayback();
 }
 
 function getBestBrowserVoice() {
@@ -417,28 +482,92 @@ function getBestBrowserVoice() {
     || null;
 }
 
-function cleanupVoiceAudio() {
-  if (currentVoiceAudio) {
-    currentVoiceAudio.pause();
-    currentVoiceAudio.src = "";
+async function playGeminiBlob(blob, requestId) {
+  if (requestId !== voiceSequence || !voiceEnabled) return false;
+
+  const ctx = ensureVoiceAudioContext();
+  if (ctx) {
+    try {
+      if (ctx.state === "suspended") await ctx.resume();
+      const bytes = await blob.arrayBuffer();
+      if (requestId !== voiceSequence || !voiceEnabled) return false;
+      const decoded = await ctx.decodeAudioData(bytes.slice(0));
+      if (requestId !== voiceSequence || !voiceEnabled) return false;
+
+      const source = ctx.createBufferSource();
+      source.buffer = decoded;
+      source.connect(ctx.destination);
+      currentVoiceSource = source;
+      voiceToggle.classList.add("speaking");
+      source.onended = () => {
+        if (currentVoiceSource === source && requestId === voiceSequence) {
+          try { source.disconnect(); } catch {}
+          currentVoiceSource = null;
+          voiceToggle.classList.remove("speaking");
+        }
+      };
+      source.start(0);
+      return true;
+    } catch (error) {
+      console.warn("Nura WebAudio:", error);
+      if (currentVoiceSource) {
+        try { currentVoiceSource.stop(0); } catch {}
+        currentVoiceSource = null;
+      }
+    }
   }
-  currentVoiceAudio = null;
-  if (currentVoiceUrl) URL.revokeObjectURL(currentVoiceUrl);
-  currentVoiceUrl = null;
-  voiceToggle.classList.remove("speaking");
+
+  if (requestId !== voiceSequence || !voiceEnabled) return false;
+  try {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audio.playsInline = true;
+    currentVoiceUrl = url;
+    currentVoiceAudio = audio;
+    voiceToggle.classList.add("speaking");
+
+    const cleanup = () => {
+      if (currentVoiceAudio === audio) {
+        currentVoiceAudio = null;
+        voiceToggle.classList.remove("speaking");
+      }
+      if (currentVoiceUrl === url) {
+        URL.revokeObjectURL(url);
+        currentVoiceUrl = null;
+      }
+    };
+    audio.addEventListener("ended", cleanup, { once: true });
+    audio.addEventListener("error", cleanup, { once: true });
+    await audio.play();
+    return true;
+  } catch (error) {
+    console.warn("Nura HTMLAudio:", error);
+    cancelCurrentVoicePlayback();
+    return false;
+  }
 }
 
 async function speakText(text, userRequested = false) {
   if (!voiceEnabled || !text) return false;
-  stopSpeaking();
+
+  const requestId = ++voiceSequence;
+  cancelCurrentVoicePlayback();
+  unlockVoiceAudio();
   voiceToggle.classList.add("speaking");
 
   try {
+    const controller = new AbortController();
+    voiceRequestController = controller;
     const response = await fetch("/api/tts", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text }),
+      signal: controller.signal
     });
+
+    if (requestId !== voiceSequence || !voiceEnabled) return false;
+    voiceRequestController = null;
 
     if (!response.ok) {
       const problem = await response.json().catch(() => ({}));
@@ -447,46 +576,46 @@ async function speakText(text, userRequested = false) {
 
     const blob = await response.blob();
     if (!blob.size) throw new Error("A Gemini retornou áudio vazio");
+    if (requestId !== voiceSequence || !voiceEnabled) return false;
 
-    currentVoiceUrl = URL.createObjectURL(blob);
-    currentVoiceAudio = new Audio();
-    currentVoiceAudio.preload = "auto";
-    currentVoiceAudio.playsInline = true;
-    currentVoiceAudio.src = currentVoiceUrl;
-    currentVoiceAudio.addEventListener("ended", cleanupVoiceAudio, { once: true });
-    currentVoiceAudio.addEventListener("error", cleanupVoiceAudio, { once: true });
-
-    await currentVoiceAudio.play();
-    return true;
+    const played = await playGeminiBlob(blob, requestId);
+    if (played) return true;
   } catch (error) {
+    if (error?.name === "AbortError") return false;
     console.warn("Nura Gemini TTS:", error);
-    cleanupVoiceAudio();
   }
 
+  if (requestId !== voiceSequence || !voiceEnabled) return false;
   if (!("speechSynthesis" in window)) {
+    voiceToggle.classList.remove("speaking");
     if (userRequested) showBanner("O navegador bloqueou a reprodução de voz. Verifique o volume e as permissões de áudio do site.");
     return false;
   }
 
   try {
     window.speechSynthesis.cancel();
+    if (requestId !== voiceSequence || !voiceEnabled) return false;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "pt-BR";
     utterance.rate = 0.95;
     utterance.pitch = 1.06;
     const voice = getBestBrowserVoice();
     if (voice) utterance.voice = voice;
-    utterance.onstart = () => voiceToggle.classList.add("speaking");
-    utterance.onend = () => voiceToggle.classList.remove("speaking");
+    utterance.onstart = () => {
+      if (requestId === voiceSequence) voiceToggle.classList.add("speaking");
+    };
+    utterance.onend = () => {
+      if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
+    };
     utterance.onerror = () => {
-      voiceToggle.classList.remove("speaking");
+      if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
       if (userRequested) showBanner("Não consegui reproduzir a voz. Confira se a aba/site está com som permitido.");
     };
     window.speechSynthesis.speak(utterance);
     return true;
   } catch (error) {
     console.warn("Nura voz do navegador:", error);
-    voiceToggle.classList.remove("speaking");
+    if (requestId === voiceSequence) voiceToggle.classList.remove("speaking");
     if (userRequested) showBanner("Não consegui iniciar a voz neste navegador.");
     return false;
   }
