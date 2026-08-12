@@ -17,15 +17,25 @@ if (params.get("embed") === "1") document.body.classList.add("embed");
 let catalog = [];
 let messages = [];
 let busy = false;
-let voiceEnabled = localStorage.getItem("nuraVoiceEnabled") === "1";
+let voiceEnabled = localStorage.getItem("nuraVoiceEnabled") !== "0";
 let mediaRecorder = null;
 let mediaStream = null;
 let recordChunks = [];
 let recordingStartedAt = 0;
 let recordInterval = null;
 let recordTimeout = null;
+let customerProfile = {
+  referenceStatus: "unknown",
+  referencePerfume: "",
+  aromaPreference: "",
+  occasion: "",
+  intensity: "",
+  dislikes: ""
+};
+let currentVoiceAudio = null;
+let currentVoiceUrl = null;
 
-const initialAssistant = "Oi 😊 É um prazer te receber. Para começar bem: o perfume é para você ou para presentear alguém?";
+const initialAssistant = "Oi, eu sou a Nura. Antes de te indicar qualquer perfume, quero entender seu gosto de verdade. Tem algum perfume que você já usou e gostou muito? Pode ser de qualquer marca — e, se não lembrar o nome, me fala que eu te ajudo pelo aroma.";
 
 async function loadCatalog() {
   try {
@@ -45,6 +55,11 @@ async function loadCatalog() {
 async function init() {
   catalog = await loadCatalog();
   updateVoiceButton();
+
+  try {
+    const savedProfile = JSON.parse(sessionStorage.getItem("nuraCustomerProfile") || "null");
+    if (savedProfile && typeof savedProfile === "object") customerProfile = { ...customerProfile, ...savedProfile };
+  } catch {}
 
   const saved = sessionStorage.getItem("nuraConversation");
   if (saved) {
@@ -107,7 +122,7 @@ function appendMessage(role, text, save = true) {
 function renderRecommendationCards(ids = [], autoScroll = true) {
   const products = ids
     .map(id => catalog.find(product => product.id === id))
-    .filter(Boolean)
+    .filter(product => product && product.realImage === true)
     .slice(0, 3);
 
   if (!products.length) return;
@@ -134,10 +149,9 @@ function renderRecommendationCards(ids = [], autoScroll = true) {
     img.referrerPolicy = "no-referrer";
     img.addEventListener("load", () => autoScroll && scrollBottom(true), { once: true });
     img.addEventListener("error", () => {
-      if (product.fallbackImage && img.src !== new URL(product.fallbackImage, location.href).href) {
-        img.src = product.fallbackImage;
-        return;
-      }
+      img.remove();
+      imageWrap.classList.add("image-unavailable");
+      imageWrap.setAttribute("aria-label", `Foto real de ${product.name} indisponível no momento`);
       if (autoScroll) scrollBottom(true);
     }, { once: true });
 
@@ -209,6 +223,7 @@ function renderSuggestedReplies(items = []) {
 
 function persist() {
   sessionStorage.setItem("nuraConversation", JSON.stringify(messages.slice(-36)));
+  sessionStorage.setItem("nuraCustomerProfile", JSON.stringify(customerProfile));
 }
 
 function scrollBottom(smooth = false) {
@@ -298,7 +313,8 @@ form.addEventListener("submit", async event => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         messages: payloadMessages,
-        recentRecommendationIds: getRecentRecommendationIds()
+        recentRecommendationIds: getRecentRecommendationIds(),
+        customerProfile
       })
     });
 
@@ -308,6 +324,9 @@ form.addEventListener("submit", async event => {
     const reply = data.reply || "Me conta um pouco mais do que você procura.";
     const ids = Array.isArray(data.recommendationIds) ? data.recommendationIds : [];
     const suggestions = Array.isArray(data.suggestedReplies) ? data.suggestedReplies : [];
+    if (data.customerProfile && typeof data.customerProfile === "object") {
+      customerProfile = { ...customerProfile, ...data.customerProfile };
+    }
 
     setBusy(false);
     appendMessage("assistant", reply);
@@ -336,6 +355,7 @@ form.addEventListener("submit", async event => {
 resetBtn.addEventListener("click", () => {
   stopSpeaking();
   sessionStorage.removeItem("nuraConversation");
+  sessionStorage.removeItem("nuraCustomerProfile");
   location.reload();
 });
 
@@ -355,27 +375,65 @@ voiceToggle.addEventListener("click", () => {
 });
 
 function stopSpeaking() {
+  cleanupVoiceAudio();
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
-function getBestVoice() {
+function getBestBrowserVoice() {
   if (!("speechSynthesis" in window)) return null;
   const voices = speechSynthesis.getVoices();
-  return voices.find(v => /pt-BR/i.test(v.lang))
+  const preferred = voices.filter(v => /pt-BR/i.test(v.lang));
+  return preferred.find(v => /female|maria|francisca|luciana|google português/i.test(v.name))
+    || preferred[0]
     || voices.find(v => /^pt/i.test(v.lang))
     || voices[0]
     || null;
 }
 
-function speakText(text) {
-  if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
+function cleanupVoiceAudio() {
+  if (currentVoiceAudio) {
+    currentVoiceAudio.pause();
+    currentVoiceAudio.src = "";
+  }
+  currentVoiceAudio = null;
+  if (currentVoiceUrl) URL.revokeObjectURL(currentVoiceUrl);
+  currentVoiceUrl = null;
+  voiceToggle.classList.remove("speaking");
+}
+
+async function speakText(text) {
+  if (!voiceEnabled || !text) return;
   stopSpeaking();
+  voiceToggle.classList.add("speaking");
+
+  try {
+    const response = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    if (!response.ok) throw new Error("TTS indisponível");
+    const blob = await response.blob();
+    currentVoiceUrl = URL.createObjectURL(blob);
+    currentVoiceAudio = new Audio(currentVoiceUrl);
+    currentVoiceAudio.preload = "auto";
+    currentVoiceAudio.addEventListener("ended", cleanupVoiceAudio, { once: true });
+    currentVoiceAudio.addEventListener("error", cleanupVoiceAudio, { once: true });
+    await currentVoiceAudio.play();
+    return;
+  } catch {
+    cleanupVoiceAudio();
+  }
+
+  if (!("speechSynthesis" in window)) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "pt-BR";
-  utterance.rate = 1.02;
-  utterance.pitch = 1;
-  const voice = getBestVoice();
+  utterance.rate = 0.96;
+  utterance.pitch = 1.04;
+  const voice = getBestBrowserVoice();
   if (voice) utterance.voice = voice;
+  utterance.onend = () => voiceToggle.classList.remove("speaking");
+  utterance.onerror = () => voiceToggle.classList.remove("speaking");
   speechSynthesis.speak(utterance);
 }
 
@@ -391,6 +449,7 @@ micBtn.addEventListener("click", async () => {
 });
 
 async function startRecording() {
+  stopSpeaking();
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     showBanner("Seu navegador não liberou gravação de áudio. Você ainda pode digitar normalmente.");
     return;
@@ -566,7 +625,8 @@ async function sendAudio(base64, duration) {
       body: JSON.stringify({
         messages: payloadMessages,
         audio: { data: base64, mimeType: "audio/wav" },
-        recentRecommendationIds: getRecentRecommendationIds()
+        recentRecommendationIds: getRecentRecommendationIds(),
+        customerProfile
       })
     });
 
@@ -583,6 +643,9 @@ async function sendAudio(base64, duration) {
     const reply = data.reply || "Entendi. Me conta só mais um pouco do que você procura.";
     const ids = Array.isArray(data.recommendationIds) ? data.recommendationIds : [];
     const suggestions = Array.isArray(data.suggestedReplies) ? data.suggestedReplies : [];
+    if (data.customerProfile && typeof data.customerProfile === "object") {
+      customerProfile = { ...customerProfile, ...data.customerProfile };
+    }
 
     setBusy(false);
     audioStatus.classList.add("hidden");
@@ -613,59 +676,61 @@ function showBanner(text) {
 
 function demoReply(text) {
   const t = text.toLowerCase();
+  const userTurns = messages.filter(m => m.role === "user").length;
   const context = messages.filter(m => m.role === "user").map(m => m.text.toLowerCase()).join(" ");
+  const aromaKnown = /doce|gourmand|fresco|limpo|amadeir|especiad|frutad|cítric|citrico|cremos|floral|oud|baunilha/.test(context);
 
-  if (t.includes("presente")) {
-    return {
-      reply: "Consigo te ajudar mesmo sem você saber quais perfumes a pessoa usa. Ela é mais discreta e elegante ou gosta de chegar e ser notada?",
-      recommendationIds: [],
-      suggestedReplies: ["Mais discreta", "Gosta de chamar atenção"]
-    };
-  }
-
-  if (/doce|gourmand/.test(t + " " + context)) {
-    if (/noite|balada|festa|encontro/.test(t + " " + context)) {
+  if (userTurns <= 1) {
+    if (/não lembro|nao lembro|nunca tive|nenhum/.test(t)) {
       return {
-        reply: "Para um perfil doce e noturno eu abriria mais o leque: 9 PM é mais jovem, Liquid Brun vai para um doce especiado moderno e Khamrah é mais gourmand. Qual dessas direções parece mais você?",
-        recommendationIds: ["afnan-9pm", "fragrance-liquid-brun", "lattafa-khamrah"],
-        suggestedReplies: ["Mais jovem", "Mais sofisticado", "Mais gourmand"]
+        reply: "Sem problema. Então eu começo pelo cheiro que te agrada: você costuma gostar mais de algo fresco e limpo, doce e envolvente, amadeirado e elegante ou mais marcante e especiado?",
+        recommendationIds: [],
+        suggestedReplies: ["Fresco e limpo", "Doce e envolvente", "Amadeirado e elegante"]
       };
     }
     return {
-      reply: "Doce pode ir do cremoso ao frutado. Você quer algo mais leve para usar bastante ou mais envolvente para aparecer?",
+      reply: "Quero usar essa referência para entender seu gosto, não para te jogar opções aleatórias. Qual é o nome do perfume que você gostou? Se não lembrar, pode me dizer como era o cheiro.",
       recommendationIds: [],
-      suggestedReplies: ["Mais leve", "Mais marcante"]
+      suggestedReplies: ["Não lembro o nome", "Era mais fresco", "Era mais doce"]
     };
   }
 
-  if (/fresco|calor|dia|trabalho/.test(t + " " + context)) {
+  if (!aromaKnown) {
     return {
-      reply: "Para esse caminho eu olharia além do Club de Nuit: Turathi Blue é uma opção cítrica elegante e Hawas traz um frescor mais energético. Para trabalho, eu iria no lado mais limpo.",
-      recommendationIds: ["afnan-turathi-blue", "rasasi-hawas", "armaf-cdn-sillage"],
-      suggestedReplies: ["Quero o mais elegante", "Quero o mais marcante", "Quero para muito calor"]
-    };
-  }
-
-  if (/marcante|forte|presença|chama atenção/.test(t + " " + context)) {
-    return {
-      reply: "Dá para ter presença de jeitos diferentes. Se quiser algo mais sério eu olharia Asad; para uma pegada oriental forte, Shaghaf Oud; se quiser algo frutado e marcante, Supremacy Not Only Intense.",
-      recommendationIds: ["lattafa-asad", "swiss-shaghaf-oud", "afnan-supremacy-noi"],
-      suggestedReplies: ["Mais elegante", "Mais oriental", "Mais versátil"]
-    };
-  }
-
-  if (/para mim|pra mim/.test(t)) {
-    return {
-      reply: "Ótimo. Me dá uma referência: tem algum perfume que você já usou, sentiu em alguém ou simplesmente gostou muito? Pode ser de qualquer marca.",
+      reply: "Essa referência já me ajuda. Agora quero entender a parte que mais te atraía nele: você gostava mais do frescor, do lado doce, da madeira/elegância ou daquela presença mais marcante?",
       recommendationIds: [],
-      suggestedReplies: ["Não lembro nenhum", "Gosto de perfume fresco", "Gosto de perfume doce"]
+      suggestedReplies: ["Mais fresco", "Mais doce", "Mais amadeirado"]
+    };
+  }
+
+  if (/fresco|limpo|cítric|citrico|calor|trabalho/.test(context)) {
+    return {
+      reply: "Agora já dá para fazer uma ponte melhor. Eu começaria pelo Afnan Turathi Blue se você quer frescor cítrico com um ar mais arrumado; se prefere algo ainda mais luminoso e mineral, o Club de Nuit Sillage entra bem. Entre os dois, eu começaria pelo Turathi Blue para uma escolha mais fácil de usar.",
+      recommendationIds: ["afnan-turathi-blue", "armaf-cdn-sillage"],
+      suggestedReplies: ["Quero o mais elegante", "Quero o mais fresco", "Vou usar no trabalho"]
+    };
+  }
+
+  if (/doce|gourmand|baunilha|cremos/.test(context)) {
+    return {
+      reply: "Pelo caminho doce que você descreveu, eu não iria direto no mais pesado. O 9 PM traz um doce mais jovem e sedutor; o Khamrah é mais quente e gourmand. Se você quer algo fácil para noite, eu começaria no 9 PM.",
+      recommendationIds: ["afnan-9pm", "lattafa-khamrah"],
+      suggestedReplies: ["Quero algo mais elegante", "Prefiro menos doce", "É para sair à noite"]
+    };
+  }
+
+  if (/amadeir|marcante|especiad|forte|presença|presenca/.test(context)) {
+    return {
+      reply: "Nesse perfil eu buscaria presença com acabamento mais elegante. O Asad vai para um lado quente e especiado; o Supremacy Not Only Intense traz uma construção frutada e amadeirada com bastante personalidade. Eu escolheria entre eles pela sensação que você quer passar.",
+      recommendationIds: ["lattafa-asad", "afnan-supremacy-noi"],
+      suggestedReplies: ["Mais elegante", "Mais marcante", "Quero para noite"]
     };
   }
 
   return {
-    reply: "Pode me explicar do seu jeito. Você quer passar uma sensação mais limpa e elegante, mais doce e envolvente ou prefere um perfume com bastante presença?",
+    reply: "Já estou entendendo melhor seu gosto. Só me diz onde você pretende usar mais esse perfume: dia a dia, trabalho, encontros ou festas? Isso vai me ajudar a te mostrar uma opção árabe que faça sentido de verdade.",
     recommendationIds: [],
-    suggestedReplies: ["Limpo e elegante", "Doce e envolvente", "Bem marcante"]
+    suggestedReplies: ["Dia a dia", "Trabalho", "Encontros e festas"]
   };
 }
 

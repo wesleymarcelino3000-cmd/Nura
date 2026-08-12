@@ -42,7 +42,8 @@
       "gourmand",
       "especiado",
       "noturno"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "lattafa-khamrah-qahwa",
@@ -85,7 +86,8 @@
       "doce",
       "gourmand",
       "noturno"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "lattafa-asad",
@@ -127,7 +129,8 @@
       "amadeirado",
       "intenso",
       "noturno"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "lattafa-asad-bourbon",
@@ -167,7 +170,8 @@
       "cremoso",
       "especiado",
       "noturno"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "afnan-9pm",
@@ -209,7 +213,8 @@
       "jovem",
       "festa",
       "noturno"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "afnan-9pm-rebel",
@@ -250,7 +255,8 @@
       "amadeirado",
       "moderno",
       "versátil"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "armaf-cdnim",
@@ -294,7 +300,8 @@
       "frutado",
       "amadeirado",
       "versátil"
-    ]
+    ],
+    "realImage": true
   },
   {
     "id": "lattafa-fakhar-black",
@@ -318,7 +325,8 @@
     "image": "/images/catalog/lattafa-fakhar-black.svg",
     "fallbackImage": "/images/catalog/lattafa-fakhar-black.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo limpo, moderno e versátil."
+    "salesHint": "Considere quando o cliente pedir algo limpo, moderno e versátil.",
+    "realImage": false
   },
   {
     "id": "lattafa-yara",
@@ -339,10 +347,12 @@
       "feminino",
       "confortável"
     ],
-    "image": "/images/catalog/lattafa-yara.svg",
+    "image": "https://www.lodoro.cl/cdn/shop/files/Yara_Lattafa_Perfume_Yara_Lattafa.png?v=1766165619&width=800",
     "fallbackImage": "/images/catalog/lattafa-yara.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo delicado, feminino e confortável."
+    "salesHint": "Considere quando o cliente pedir algo delicado, feminino e confortável.",
+    "imageSource": "https://www.lodoro.cl/products/lattafa-yara-edp-100ml",
+    "realImage": true
   },
   {
     "id": "lattafa-oud-for-glory",
@@ -365,7 +375,8 @@
     "image": "/images/catalog/lattafa-oud-for-glory.svg",
     "fallbackImage": "/images/catalog/lattafa-oud-for-glory.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo escuro, sofisticado e de presença."
+    "salesHint": "Considere quando o cliente pedir algo escuro, sofisticado e de presença.",
+    "realImage": false
   },
   {
     "id": "lattafa-qaed-al-fursan",
@@ -385,10 +396,12 @@
       "amadeirado",
       "casual"
     ],
-    "image": "/images/catalog/lattafa-qaed-al-fursan.svg",
+    "image": "https://www.boozyshop.nl/cdn/shop/files/lattafa-qaed-al-fursan-eau-de-parfum-68679135166847.webp",
     "fallbackImage": "/images/catalog/lattafa-qaed-al-fursan.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo vibrante, marcante e descontraído."
+    "salesHint": "Considere quando o cliente pedir algo vibrante, marcante e descontraído.",
+    "imageSource": "https://www.boozyshop.de/products/lattafa-qaed-al-fursan-eau-de-parfum",
+    "realImage": true
   },
   {
     "id": "afnan-turathi-blue",
@@ -409,10 +422,12 @@
       "elegante",
       "calor"
     ],
-    "image": "/images/catalog/afnan-turathi-blue.svg",
+    "image": "https://afnan.com/cdn/shop/files/Turathi_Blue-1.png?v=1742203702&width=2000",
     "fallbackImage": "/images/catalog/afnan-turathi-blue.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo refrescante, elegante e moderno."
+    "salesHint": "Considere quando o cliente pedir algo refrescante, elegante e moderno.",
+    "imageSource": "https://afnan.com/products/turathi-blue-homme",
+    "realImage": true
   },
   {
     "id": "afnan-supremacy-noi",
@@ -433,10 +448,12 @@
       "marcante",
       "elegante"
     ],
-    "image": "/images/catalog/afnan-supremacy-noi.svg",
+    "image": "https://afnan.com/cdn/shop/files/SupremacyIntense-Product-01.jpg?v=1727708391&width=1080",
     "fallbackImage": "/images/catalog/afnan-supremacy-noi.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo sofisticado, marcante e confiante."
+    "salesHint": "Considere quando o cliente pedir algo sofisticado, marcante e confiante.",
+    "imageSource": "https://afnan.com/products/supremacy-not-only-intense",
+    "realImage": true
   },
   {
     "id": "armaf-cdn-sillage",
@@ -457,10 +474,12 @@
       "almiscarado",
       "limpo"
     ],
-    "image": "/images/catalog/armaf-cdn-sillage.svg",
+    "image": "https://armaf.com/cdn/shop/files/68.png?v=1758576452&width=3000",
     "fallbackImage": "/images/catalog/armaf-cdn-sillage.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo limpo, brilhante e muito elegante."
+    "salesHint": "Considere quando o cliente pedir algo limpo, brilhante e muito elegante.",
+    "imageSource": "https://armaf.com/products/armaf-club-de-nuit-silage-men",
+    "realImage": true
   },
   {
     "id": "armaf-cdn-milestone",
@@ -481,10 +500,12 @@
       "fresco",
       "elegante"
     ],
-    "image": "/images/catalog/armaf-cdn-milestone.svg",
+    "image": "https://armaf.com/cdn/shop/files/67.png?v=1758576374&width=3000",
     "fallbackImage": "/images/catalog/armaf-cdn-milestone.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo arejado, sofisticado e diferente."
+    "salesHint": "Considere quando o cliente pedir algo arejado, sofisticado e diferente.",
+    "imageSource": "https://armaf.com/products/club-de-nuit-milestone",
+    "realImage": true
   },
   {
     "id": "maison-jean-lowe-immortel",
@@ -508,7 +529,8 @@
     "image": "/images/catalog/maison-jean-lowe-immortel.svg",
     "fallbackImage": "/images/catalog/maison-jean-lowe-immortel.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo elegante, luminoso e sofisticado."
+    "salesHint": "Considere quando o cliente pedir algo elegante, luminoso e sofisticado.",
+    "realImage": false
   },
   {
     "id": "maison-the-tux",
@@ -532,7 +554,8 @@
     "image": "/images/catalog/maison-the-tux.svg",
     "fallbackImage": "/images/catalog/maison-the-tux.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo social, elegante e bem vestido."
+    "salesHint": "Considere quando o cliente pedir algo social, elegante e bem vestido.",
+    "realImage": false
   },
   {
     "id": "maison-tobacco-touch",
@@ -556,7 +579,8 @@
     "image": "/images/catalog/maison-tobacco-touch.svg",
     "fallbackImage": "/images/catalog/maison-tobacco-touch.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo aconchegante, adulto e sofisticado."
+    "salesHint": "Considere quando o cliente pedir algo aconchegante, adulto e sofisticado.",
+    "realImage": false
   },
   {
     "id": "paris-khair-pistachio",
@@ -580,7 +604,8 @@
     "image": "/images/catalog/paris-khair-pistachio.svg",
     "fallbackImage": "/images/catalog/paris-khair-pistachio.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo divertido, cremoso e viciante."
+    "salesHint": "Considere quando o cliente pedir algo divertido, cremoso e viciante.",
+    "realImage": false
   },
   {
     "id": "paris-vibrant-vetiver",
@@ -604,7 +629,8 @@
     "image": "/images/catalog/paris-vibrant-vetiver.svg",
     "fallbackImage": "/images/catalog/paris-vibrant-vetiver.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo leve, artístico e refrescante."
+    "salesHint": "Considere quando o cliente pedir algo leve, artístico e refrescante.",
+    "realImage": false
   },
   {
     "id": "fragrance-liquid-brun",
@@ -628,7 +654,8 @@
     "image": "/images/catalog/fragrance-liquid-brun.svg",
     "fallbackImage": "/images/catalog/fragrance-liquid-brun.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo envolvente, moderno e noturno."
+    "salesHint": "Considere quando o cliente pedir algo envolvente, moderno e noturno.",
+    "realImage": false
   },
   {
     "id": "rasasi-hawas",
@@ -652,7 +679,8 @@
     "image": "/images/catalog/rasasi-hawas.svg",
     "fallbackImage": "/images/catalog/rasasi-hawas.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo energético, jovem e chamativo."
+    "salesHint": "Considere quando o cliente pedir algo energético, jovem e chamativo.",
+    "realImage": false
   },
   {
     "id": "alharamain-amber-oud-gold",
@@ -676,7 +704,8 @@
     "image": "/images/catalog/alharamain-amber-oud-gold.svg",
     "fallbackImage": "/images/catalog/alharamain-amber-oud-gold.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo luxuoso, doce e expansivo."
+    "salesHint": "Considere quando o cliente pedir algo luxuoso, doce e expansivo.",
+    "realImage": false
   },
   {
     "id": "alharamain-detour-noir",
@@ -700,7 +729,8 @@
     "image": "/images/catalog/alharamain-detour-noir.svg",
     "fallbackImage": "/images/catalog/alharamain-detour-noir.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo aconchegante, elegante e moderno."
+    "salesHint": "Considere quando o cliente pedir algo aconchegante, elegante e moderno.",
+    "realImage": false
   },
   {
     "id": "swiss-shaghaf-oud",
@@ -724,7 +754,8 @@
     "image": "/images/catalog/swiss-shaghaf-oud.svg",
     "fallbackImage": "/images/catalog/swiss-shaghaf-oud.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo opulento, oriental e de muita presença."
+    "salesHint": "Considere quando o cliente pedir algo opulento, oriental e de muita presença.",
+    "realImage": false
   },
   {
     "id": "khadlaj-shiyaaka-red",
@@ -748,6 +779,7 @@
     "image": "/images/catalog/khadlaj-shiyaaka-red.svg",
     "fallbackImage": "/images/catalog/khadlaj-shiyaaka-red.svg",
     "imageType": "catalog-illustration",
-    "salesHint": "Considere quando o cliente pedir algo arrumado, elegante e confiante."
+    "salesHint": "Considere quando o cliente pedir algo arrumado, elegante e confiante.",
+    "realImage": false
   }
 ]

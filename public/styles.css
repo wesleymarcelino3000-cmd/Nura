@@ -344,3 +344,21 @@ body.embed .experience-card{height:100dvh;max-height:100dvh;min-height:0}
   .recommendations{margin-left:31px;width:calc(100% - 31px)}
   .quick-replies{margin-left:31px}
 }
+
+
+/* NURA V4 — experiência de atendente e voz natural */
+.voice-toggle.speaking{position:relative;box-shadow:0 0 0 4px rgba(164,123,67,.12)}
+.voice-toggle.speaking::after{content:"";position:absolute;inset:-4px;border:1px solid rgba(164,123,67,.45);border-radius:15px;animation:nuraVoicePulse 1.2s infinite ease-out}
+@keyframes nuraVoicePulse{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.18);opacity:0}}
+@media(max-width:620px){
+  .topbar-copy p{color:#8a7c6e}
+  .chat{padding-top:14px}
+  .intro-card{background:linear-gradient(145deg,#fffaf3,#f7efe5);border-color:#eadfce}
+  .intro-card h3{line-height:1.18}
+  .bubble{box-shadow:0 4px 14px rgba(55,42,29,.035)}
+  .assistant .bubble{background:#f6efe6}
+  .composer{backdrop-filter:blur(14px)}
+}
+
+.product-image-wrap.image-unavailable{display:grid;place-items:center;padding:18px;text-align:center;color:#8a7b6d;font-size:11px}
+.product-image-wrap.image-unavailable::after{content:"Foto real indisponível no momento"}

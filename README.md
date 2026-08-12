@@ -1,81 +1,47 @@
-# Nura V3 — Consultora de Perfumes Árabes
+# Nura V4 — Atendente Virtual de Perfumes Árabes
 
-Versão ampliada da Nura, preparada para Cloudflare Pages + Gemini API.
+Versão focada em atendimento humano: primeiro entende o cliente, depois compara com a perfumaria árabe e só então mostra opções com fotografia real.
 
-## Principais melhorias da V3
+## O que mudou
 
-- catálogo curado ampliado para 26 perfumes de várias casas árabes;
-- regras anti-repetição para não recomendar sempre os mesmos produtos;
-- Gemini 3.6 Flash como modelo padrão;
-- respostas sugeridas em botões para deixar a conversa mais natural;
-- memória maior da conversa;
-- envio de mensagem por áudio real;
-- o áudio é convertido para WAV no navegador e enviado ao Gemini para compreensão/transcrição;
-- a Nura pode falar suas respostas usando a voz disponível no navegador, sem API adicional;
-- botão para ligar/desligar a voz;
-- mobile redesenhado;
-- correção de rolagem dos cards e imagens;
-- widget para outros sites com permissão de microfone;
-- API pública do projeto continua disponível em `/api/chat` e `/api/catalog`.
+- fluxo consultivo em etapas: perfume de referência -> aroma -> contexto quando necessário -> recomendação;
+- cards não aparecem logo de cara;
+- perfil do cliente fica salvo na sessão para evitar perguntas repetidas;
+- comparação com perfumes não árabes sem afirmar clone/inspiração oficial;
+- catálogo geral com 26 perfumes;
+- 13 produtos habilitados para cards com fotografia real;
+- voz principal via Gemini Flash TTS com perfil de atendente brasileira feminina, calorosa e natural;
+- fallback para `speechSynthesis` do navegador se o TTS não responder;
+- gravação de áudio do cliente mantida;
+- mobile e rolagem mantidos/refinados.
 
-## Áudio
+## Variáveis do Cloudflare
 
-O usuário toca no microfone, grava e toca novamente para enviar.
-
-O navegador pede permissão para o microfone. O áudio é processado no próprio navegador para WAV e enviado ao endpoint `/api/chat`.
-
-A gravação é limitada a 45 segundos no frontend.
-
-## Voz da Nura
-
-O botão de alto-falante no topo ativa/desativa a leitura das respostas.
-
-A síntese usa `speechSynthesis` do navegador. Não exige outra chave ou serviço pago.
-
-A qualidade/timbre da voz depende das vozes instaladas no dispositivo/navegador.
-
-## Gemini
-
-Variável obrigatória no Cloudflare:
+Obrigatória:
 
 `GEMINI_API_KEY`
 
-Variável opcional:
+Opcionais:
 
-`GEMINI_MODEL`
+- `GEMINI_MODEL` — padrão `gemini-3.6-flash`
+- `GEMINI_TTS_MODEL` — padrão `gemini-2.5-flash-preview-tts`
+- `GEMINI_TTS_VOICE` — padrão `Sulafat`
 
-Se não existir, o sistema usa:
-
-`gemini-3.6-flash`
+Não é necessário criar outra chave: `/api/chat` e `/api/tts` usam a mesma `GEMINI_API_KEY`.
 
 ## Cloudflare Pages
 
-- build output: `public`
 - branch: `main`
-- pasta `functions/` na raiz
-- secret `GEMINI_API_KEY`
+- build output: `public`
+- `functions/` na raiz
+- secret `GEMINI_API_KEY` no Cloudflare
 
-## Integração em outros sites
+## Rotas
 
-```html
-<script
-  src="https://SEU-DOMINIO.pages.dev/embed.js"
-  data-label="Escolha seu perfume">
-</script>
-```
+- `POST /api/chat` — conversa, perfil, áudio do cliente e recomendações
+- `GET /api/catalog` — catálogo
+- `POST /api/tts` — voz natural da Nura
 
-O script já cria o iframe com permissão de microfone.
+## Observação sobre imagens
 
-## Catálogo e imagens
-
-Os produtos originais da V2 mantêm as imagens já configuradas.
-
-Os novos produtos adicionados na V3 usam ilustrações de catálogo locais com nome e marca para evitar hotlink inseguro. Substitua essas ilustrações por fotos reais/licenciadas dos seus produtos quando desejar.
-
-Arquivos dos novos produtos:
-
-`public/images/catalog/`
-
-## Importante
-
-A Nura foi orientada a conversar sobre um universo de marcas árabes maior que os cards do catálogo. Para fatos muito específicos que não estejam no catálogo, ela deve evitar inventar informações.
+Os cards visuais só são liberados para itens marcados com `realImage: true`. Se uma foto externa não carregar, o sistema informa que a foto está indisponível em vez de fingir uma imagem do produto.

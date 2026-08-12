@@ -1,1 +1,5 @@
 GEMINI_API_KEY=COLE_SUA_CHAVE_AQUI
+# opcionais:
+# GEMINI_MODEL=gemini-3.6-flash
+# GEMINI_TTS_MODEL=gemini-2.5-flash-preview-tts
+# GEMINI_TTS_VOICE=Sulafat
