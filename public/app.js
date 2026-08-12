@@ -17,7 +17,7 @@ if (params.get("embed") === "1") document.body.classList.add("embed");
 let catalog = [];
 let messages = [];
 let busy = false;
-let voiceEnabled = localStorage.getItem("nuraVoiceEnabledV2") !== "0";
+let voiceEnabled = true;
 let mediaRecorder = null;
 let mediaStream = null;
 let recordChunks = [];
@@ -38,6 +38,7 @@ let currentVoiceSource = null;
 let voiceAudioContext = null;
 let voiceRequestController = null;
 let voiceSequence = 0;
+let initialVoiceSpoken = false;
 
 const initialAssistant = "Oi, eu sou a Nura. Antes de te indicar qualquer perfume, quero entender seu gosto de verdade. Tem algum perfume que você já usou e gostou muito? Pode ser de qualquer marca — e, se não lembrar o nome, me fala que eu te ajudo pelo aroma.";
 
@@ -58,6 +59,10 @@ async function loadCatalog() {
 
 async function init() {
   catalog = await loadCatalog();
+
+  // A Nura sempre inicia com voz automática ligada.
+  voiceEnabled = true;
+  try { localStorage.setItem("nuraVoiceEnabledV2", "1"); } catch {}
   updateVoiceButton();
 
   try {
@@ -121,7 +126,6 @@ function appendMessage(role, text, save = true) {
     listenBtn.textContent = "🔊";
     listenBtn.addEventListener("click", async () => {
       voiceEnabled = true;
-      localStorage.setItem("nuraVoiceEnabledV2", "1");
       updateVoiceButton();
       await speakText(String(text ?? ""), true);
     });
@@ -311,6 +315,12 @@ document.addEventListener("click", event => {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+
+  // O envio é uma interação explícita: aproveitamos para liberar o áudio.
+  voiceEnabled = true;
+  unlockVoiceAudio();
+  updateVoiceButton();
+
   const text = input.value.trim();
   if (!text || busy || mediaRecorder) return;
 
@@ -416,12 +426,35 @@ function unlockVoiceAudio() {
   } catch {}
 }
 
-document.addEventListener("pointerdown", unlockVoiceAudio, { capture: true });
-document.addEventListener("keydown", unlockVoiceAudio, { capture: true });
+async function handleFirstVoiceInteraction() {
+  unlockVoiceAudio();
+
+  if (initialVoiceSpoken || !voiceEnabled) return;
+
+  // Só lê a saudação automaticamente em uma conversa nova.
+  const userHasSpoken = messages.some(item => item.role === "user");
+  if (userHasSpoken) {
+    initialVoiceSpoken = true;
+    return;
+  }
+
+  initialVoiceSpoken = true;
+
+  // Pequeno atraso mantém a interação do navegador válida e evita disputar
+  // com o próprio clique/tecla do cliente.
+  setTimeout(() => {
+    if (voiceEnabled) speakText(initialAssistant);
+  }, 80);
+}
+
+document.addEventListener("pointerdown", handleFirstVoiceInteraction, { capture: true, once: true });
+document.addEventListener("keydown", handleFirstVoiceInteraction, { capture: true, once: true });
 
 voiceToggle.addEventListener("click", async () => {
   voiceEnabled = !voiceEnabled;
-  localStorage.setItem("nuraVoiceEnabledV2", voiceEnabled ? "1" : "0");
+
+  // O botão funciona como mute desta sessão.
+  // Ao abrir o site novamente, a leitura automática volta ligada.
   updateVoiceButton();
   unlockVoiceAudio();
 
